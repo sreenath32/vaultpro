@@ -66,15 +66,23 @@
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        
+        #loading-overlay { transition: opacity 0.5s ease; }
     </style>
 </head>
 <body class="flex flex-col md:flex-row h-screen overflow-hidden">
+
+    <!-- Loading Overlay for DuckDB -->
+    <div id="loading-overlay" class="fixed inset-0 bg-[#0f172a] z-[100] flex flex-col items-center justify-center">
+        <div class="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+        <h2 class="text-xl font-bold">Initializing DuckDB Engine...</h2>
+    </div>
 
     <!-- DESKTOP Sidebar Navigation -->
     <aside class="hidden md:flex w-64 glass h-full flex-col p-6 z-10">
         <div class="flex items-center gap-3 mb-10">
             <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-xl font-bold shadow-lg">
-                <i class="fa-solid fa-wallet text-white"></i>
+                <i class="fa-solid fa-database text-white"></i>
             </div>
             <h1 class="text-xl font-bold tracking-wider">Vault<span class="text-primary">Pro</span></h1>
         </div>
@@ -95,16 +103,15 @@
         </nav>
 
         <div class="pt-4 border-t border-gray-700/50">
-            <button onclick="connectLocalFile()" class="file-connect-btn w-full flex items-center justify-between px-4 py-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 hover:bg-yellow-500/20 transition-all text-left text-sm font-semibold">
-                <span class="flex items-center gap-2"><i class="fa-solid fa-folder-open"></i> <span class="file-status-text">Connect File</span></span>
-                <i class="fa-solid fa-plug text-xs opacity-70"></i>
-            </button>
+            <div class="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-left text-sm font-semibold cursor-default">
+                <span class="flex items-center gap-2"><i class="fa-solid fa-server"></i> DuckDB Active</span>
+                <i class="fa-solid fa-check-circle text-xs opacity-70"></i>
+            </div>
         </div>
     </aside>
 
     <!-- Main Workspace -->
     <main class="flex-1 p-4 pb-32 md:p-8 md:pb-8 overflow-y-auto relative w-full">
-        <!-- Ambient Glowing Background Spheres -->
         <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-primary rounded-full mix-blend-multiply filter blur-[128px] opacity-20 -z-10 pointer-events-none"></div>
         <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-secondary rounded-full mix-blend-multiply filter blur-[128px] opacity-20 -z-10 pointer-events-none"></div>
 
@@ -112,13 +119,13 @@
         <div class="md:hidden flex justify-between items-center mb-4 px-2">
             <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-sm font-bold shadow-lg">
-                    <i class="fa-solid fa-wallet text-white"></i>
+                    <i class="fa-solid fa-database text-white"></i>
                 </div>
                 <h1 class="text-lg font-bold tracking-wider">Vault<span class="text-primary">Pro</span></h1>
             </div>
-            <button onclick="connectLocalFile()" class="file-connect-btn px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs font-semibold flex items-center gap-2">
-                <i class="fa-solid fa-folder-open"></i> <span class="file-status-text">File</span>
-            </button>
+            <div class="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center gap-2">
+                <i class="fa-solid fa-server"></i> DuckDB
+            </div>
         </div>
 
         <!-- GLOBAL MONTH FILTER -->
@@ -166,7 +173,7 @@
             </div>
 
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg md:text-xl font-semibold">Account Balances</h3>
+                <h3 class="text-lg md:text-xl font-semibold">Live Account Balances</h3>
                 <div class="glass px-4 py-1.5 rounded-full flex items-center gap-2">
                     <span class="text-xs md:text-sm text-gray-400">Total</span>
                     <span class="font-bold text-emerald-400" id="total-balance-dash">₹0</span>
@@ -260,7 +267,6 @@
             <div class="flex flex-col md:flex-row md:justify-between items-start md:items-center gap-4 mb-4">
                 <h2 class="text-2xl md:text-3xl font-bold">Transactions</h2>
                 
-                <!-- Toggle Switch -->
                 <div class="glass p-1 rounded-xl flex gap-1">
                     <button id="btn-view-table" onclick="setTxnView('table')" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all text-white bg-primary">Table</button>
                     <button id="btn-view-graph" onclick="setTxnView('graph')" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all text-gray-400 hover:text-white">Graph</button>
@@ -286,7 +292,6 @@
                 </div>
             </div>
 
-            <!-- Global Bank Filter for Table & Graph -->
             <div class="flex justify-end mb-4">
                 <div class="relative">
                     <select id="txn-account-filter" class="input-glass rounded-lg px-4 py-2 pr-8 text-xs md:text-sm appearance-none outline-none cursor-pointer" onchange="refreshTxnViews()">
@@ -301,14 +306,11 @@
 
             <!-- TABLE VIEW -->
             <div id="view-table" class="glass rounded-2xl flex flex-col h-[48vh] overflow-hidden">
-                <div class="overflow-y-auto p-3 md:p-5 space-y-3" id="transactions-list">
-                    <!-- Dynamic Transaction Cards Load Here -->
-                </div>
+                <div class="overflow-y-auto p-3 md:p-5 space-y-3" id="transactions-list"></div>
             </div>
 
             <!-- GRAPH VIEW -->
             <div id="view-graph" class="hidden glass p-4 md:p-8 rounded-2xl flex flex-col items-center w-full min-h-[48vh]">
-                <!-- Doughnut Canvas -->
                 <div class="w-full max-w-lg aspect-square mt-2 relative">
                     <canvas id="expenseChart"></canvas>
                 </div>
@@ -322,12 +324,7 @@
                 
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg md:text-xl font-semibold text-white">Initial Account Balances</h3>
-                    <div class="glass px-4 py-1.5 rounded-full flex items-center gap-2">
-                        <span class="text-xs md:text-sm text-gray-400">Total</span>
-                        <span class="font-bold text-emerald-400" id="total-balance-settings">₹0</span>
-                    </div>
                 </div>
-
                 <form id="balances-form" class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
@@ -344,7 +341,7 @@
                         </div>
                     </div>
                     <button type="submit" id="save-balances-btn" class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform">
-                        Update Balances
+                        Update Initial Balances
                     </button>
                 </form>
 
@@ -365,45 +362,50 @@
                 </form>
 
                 <div class="mt-8 border-t border-gray-700/50 pt-6 md:pt-8">
+                    <h3 class="text-lg md:text-xl font-semibold mb-4 text-white">Data Management (DuckDB)</h3>
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <button onclick="exportDataCSV()" class="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:opacity-90 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform flex justify-center items-center gap-2">
+                            <i class="fa-solid fa-download"></i> Export to CSV
+                        </button>
+                        <div class="flex-1 relative">
+                            <input type="file" id="csv-import-input" accept=".csv" class="hidden" onchange="importDataCSV(event)">
+                            <button onclick="document.getElementById('csv-import-input').click()" class="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:opacity-90 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform flex justify-center items-center gap-2">
+                                <i class="fa-solid fa-upload"></i> Import CSV
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 border-t border-gray-700/50 pt-6 md:pt-8">
                     <h3 class="text-lg md:text-xl font-semibold mb-4 text-white">Master Categories</h3>
                     <form id="category-form" class="space-y-4 mb-6">
-                        <div>
-                            <label class="block text-xs md:text-sm text-gray-400 mb-2">Add New Category</label>
-                            <div class="flex flex-col md:flex-row gap-3">
-                                <input type="text" id="new-category-input" class="flex-1 input-glass rounded-lg px-4 py-3" placeholder="e.g., Pet Care" required>
-                                <button type="submit" id="save-category-btn" class="bg-gradient-to-r from-secondary to-pink-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform">
-                                    <i class="fa-solid fa-plus md:mr-1"></i> <span class="md:hidden">Add</span>
-                                </button>
-                            </div>
+                        <div class="flex flex-col md:flex-row gap-3">
+                            <input type="text" id="new-category-input" class="flex-1 input-glass rounded-lg px-4 py-3" placeholder="Add category (e.g., Pet Care)" required>
+                            <button type="submit" id="save-category-btn" class="bg-gradient-to-r from-secondary to-pink-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform">
+                                <i class="fa-solid fa-plus md:mr-1"></i> <span class="md:hidden">Add</span>
+                            </button>
                         </div>
                     </form>
-                    <label class="block text-xs md:text-sm text-gray-400 mb-2">Current Master List</label>
                     <div id="master-categories-list" class="flex flex-wrap gap-2"></div>
                 </div>
 
                 <div class="mt-8 border-t border-gray-700/50 pt-6 md:pt-8">
                     <h3 class="text-lg md:text-xl font-semibold mb-4 text-white">Master Payment Methods</h3>
                     <form id="payment-method-form" class="space-y-4 mb-6">
-                        <div>
-                            <label class="block text-xs md:text-sm text-gray-400 mb-2">Add New Payment Method</label>
-                            <div class="flex flex-col md:flex-row gap-3">
-                                <input type="text" id="new-payment-method-input" class="flex-1 input-glass rounded-lg px-4 py-3" placeholder="e.g., Google Pay" required>
-                                <button type="submit" id="save-payment-method-btn" class="bg-gradient-to-r from-secondary to-pink-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform">
-                                    <i class="fa-solid fa-plus md:mr-1"></i> <span class="md:hidden">Add</span>
-                                </button>
-                            </div>
+                        <div class="flex flex-col md:flex-row gap-3">
+                            <input type="text" id="new-payment-method-input" class="flex-1 input-glass rounded-lg px-4 py-3" placeholder="Add payment (e.g., Google Pay)" required>
+                            <button type="submit" id="save-payment-method-btn" class="bg-gradient-to-r from-secondary to-pink-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform">
+                                <i class="fa-solid fa-plus md:mr-1"></i> <span class="md:hidden">Add</span>
+                            </button>
                         </div>
                     </form>
-                    <label class="block text-xs md:text-sm text-gray-400 mb-2">Current Master List</label>
                     <div id="master-payment-methods-list" class="flex flex-wrap gap-2"></div>
                 </div>
 
             </div>
         </div>
 
-        <!-- Dedicated bottom spacer block so mobile nav doesn't cover content -->
         <div class="h-28 md:hidden w-full flex-shrink-0"></div>
-
     </main>
 
     <!-- MOBILE Bottom Navigation Bar -->
@@ -427,30 +429,38 @@
     </nav>
 
     <script>
+        // ==========================================
+        // LOCAL SETTINGS MANAGEMENT
+        // ==========================================
         const defaultCategories = ["Groceries", "Rent/Mortgage", "Utilities", "Transportation", "Dining Out", "Entertainment", "Healthcare", "Salary", "Investments", "Miscellaneous"];
         const defaultPaymentMethods = ["UPI", "Credit Card", "Debit Card", "Cash", "Net Banking"];
         
-        let data = { 
+        let settingsData = { 
             monthlyBudget: 50000, 
-            accounts: { UBI: 0, HDFC: 0, Axis: 0 }, 
-            transactions: [], 
+            initialAccounts: { UBI: 0, HDFC: 0, Axis: 0 }, 
             categories: [...defaultCategories],
             paymentMethods: [...defaultPaymentMethods]
         };
-        
-        let fileHandle = null;
-        let editingTransactionId = null; 
-        
-        // Setup Global Month Filter
+
+        const savedSettings = localStorage.getItem('vaultpro_settings');
+        if (savedSettings) {
+            try { settingsData = JSON.parse(savedSettings); } catch(e){}
+        }
+
+        function saveSettings() {
+            localStorage.setItem('vaultpro_settings', JSON.stringify(settingsData));
+        }
+
+        // Global State
         let currentGlobalMonth = new Date().toISOString().slice(0, 7);
-        window.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('global-month').value = currentGlobalMonth;
-        });
+        let editingTransactionId = null; 
+        document.getElementById('global-month').value = currentGlobalMonth;
+        document.getElementById('date').value = new Date().toISOString().split('T')[0];
 
         // ==========================================
-        // DATABASE HELPERS FOR SAVING FILE HANDLE
+        // DUCKDB WASM INITIALIZATION
         // ==========================================
-        function getDB() {
+        async function getIndexedDB() {
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open('VaultProDB', 1);
                 request.onupgradeneeded = e => { e.target.result.createObjectStore('store'); };
@@ -458,118 +468,127 @@
                 request.onerror = e => reject(e.target.error);
             });
         }
-        async function saveHandleToDB(handle) {
-            const db = await getDB();
-            const tx = db.transaction('store', 'readwrite');
-            tx.objectStore('store').put(handle, 'savedFileHandle');
-        }
-        async function loadHandleFromDB() {
-            const db = await getDB();
-            return new Promise((resolve) => {
-                const tx = db.transaction('store', 'readonly');
-                const req = tx.objectStore('store').get('savedFileHandle');
-                req.onsuccess = () => resolve(req.result);
-                req.onerror = () => resolve(null);
-            });
-        }
-        async function verifyPermission(fileHandle) {
-            const opts = { mode: 'readwrite' };
-            if ((await fileHandle.queryPermission(opts)) === 'granted') return true;
-            if ((await fileHandle.requestPermission(opts)) === 'granted') return true;
-            return false;
+
+        async function initDuckDB() {
+            try {
+                // Dynamically import DuckDB
+                const duckdb = await import("https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.32.0/+esm");
+                const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
+                const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
+                
+                const worker_url = URL.createObjectURL(
+                    new Blob([`importScripts("${bundle.mainWorker}");`], { type: 'text/javascript' })
+                );
+                const worker = new Worker(worker_url);
+                const logger = new duckdb.ConsoleLogger();
+                window.db = new duckdb.AsyncDuckDB(logger, worker);
+                
+                await window.db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+                URL.revokeObjectURL(worker_url);
+
+                const conn = await window.db.connect();
+                // Create schema
+                await conn.query(`
+                    CREATE TABLE IF NOT EXISTS transactions (
+                        id BIGINT PRIMARY KEY,
+                        type VARCHAR,
+                        amount DOUBLE,
+                        account VARCHAR,
+                        category VARCHAR,
+                        paymentMethod VARCHAR,
+                        txn_date VARCHAR
+                    );
+                `);
+                
+                // Attempt to restore from IndexedDB
+                const idb = await getIndexedDB();
+                const tx = idb.transaction('store', 'readonly');
+                const req = tx.objectStore('store').get('duckdb_backup');
+                
+                req.onsuccess = async () => {
+                    if (req.result) {
+                        await window.db.registerFileBuffer('backup.parquet', req.result);
+                        await conn.query(`INSERT INTO transactions SELECT * FROM read_parquet('backup.parquet');`);
+                    }
+                    await conn.close();
+                    document.getElementById('loading-overlay').style.opacity = '0';
+                    setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 500);
+                    
+                    populateLists();
+                    updateDashboard();
+                    if(document.getElementById('transactions').classList.contains('active')) refreshTxnViews();
+                };
+            } catch (err) {
+                console.error("DuckDB Init Error:", err);
+                alert("Failed to initialize database engine.");
+            }
         }
 
-        window.addEventListener('DOMContentLoaded', async () => {
-            fileHandle = await loadHandleFromDB();
-            if (fileHandle) {
-                document.querySelectorAll('.file-status-text').forEach(el => el.innerText = "Reconnect File");
-                document.querySelectorAll('.file-connect-btn').forEach(btn => {
-                    btn.classList.add('animate-pulse');
-                });
-            }
+        // Helper to query DB and return JSON array
+        async function queryDB(sql) {
+            const conn = await window.db.connect();
+            const result = await conn.query(sql);
+            await conn.close();
+            return result.toArray().map(row => row.toJSON());
+        }
+
+        // Helper to sync DuckDB state back to IndexedDB (Auto-save)
+        async function persistDB() {
+            const conn = await window.db.connect();
+            await conn.query(`COPY transactions TO 'backup.parquet' (FORMAT PARQUET);`);
+            const buffer = await window.db.copyFileToBuffer('backup.parquet');
+            await conn.close();
+
+            const idb = await getIndexedDB();
+            const tx = idb.transaction('store', 'readwrite');
+            tx.objectStore('store').put(buffer, 'duckdb_backup');
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initDuckDB();
         });
 
         // ==========================================
-        // FILE SYSTEM LOGIC
+        // IMPORT / EXPORT (CSV)
         // ==========================================
-        async function connectLocalFile() {
+        window.exportDataCSV = async function() {
             try {
-                if (fileHandle) {
-                    const hasPermission = await verifyPermission(fileHandle);
-                    if (hasPermission) {
-                        await syncDataFromFile();
-                        return;
-                    }
-                }
+                const conn = await window.db.connect();
+                await conn.query(`COPY transactions TO 'export.csv' (HEADER, DELIMITER ',');`);
+                const buffer = await window.db.copyFileToBuffer('export.csv');
+                await conn.close();
                 
-                [fileHandle] = await window.showOpenFilePicker({
-                    types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }],
-                });
-                
-                await saveHandleToDB(fileHandle);
-                await syncDataFromFile();
+                const blob = new Blob([buffer], { type: 'text/csv' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `VaultPro_Export_${new Date().toISOString().split('T')[0]}.csv`;
+                link.click();
+            } catch (err) {
+                console.error(err);
+                alert("Export failed.");
+            }
+        };
 
-            } catch (error) {
-                if (error.name !== 'AbortError') console.error("File selection error:", error);
-            }
-        }
-
-        async function syncDataFromFile() {
-            const file = await fileHandle.getFile();
-            const contents = await file.text();
-            
-            if (contents && contents.trim().length > 0) {
-                data = JSON.parse(contents);
-                if (!data.categories) data.categories = [...defaultCategories];
-                if (!data.paymentMethods) data.paymentMethods = [...defaultPaymentMethods];
-            } else {
-                await saveToFile(); 
-            }
-            
-            document.querySelectorAll('.file-status-text').forEach(el => el.innerText = "Connected");
-            document.querySelectorAll('.file-connect-btn').forEach(btn => {
-                btn.classList.remove('bg-yellow-500/10', 'border-yellow-500/20', 'text-yellow-400', 'animate-pulse');
-                btn.classList.add('bg-emerald-500/10', 'border-emerald-500/20', 'text-emerald-400');
-            });
-            
-            updateDashboard();
-            populateLists(); 
-            
-            if(document.getElementById('transactions').classList.contains('active')) {
-                refreshTxnViews();
-            }
-            
-            if(document.getElementById('settings').classList.contains('active')) {
-                document.getElementById('update-bal-ubi').value = data.accounts.UBI || 0;
-                document.getElementById('update-bal-hdfc').value = data.accounts.HDFC || 0;
-                document.getElementById('update-bal-axis').value = data.accounts.Axis || 0;
-                calculateLiveTotal();
-            }
-        }
-
-        async function saveToFile() {
-            if (!fileHandle) {
-                localStorage.setItem('financeData', JSON.stringify(data));
-                return;
-            }
+        window.importDataCSV = async function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
             try {
-                const writable = await fileHandle.createWritable();
-                await writable.write(JSON.stringify(data, null, 2));
-                await writable.close();
-            } catch (error) {
-                console.error("Direct write failed:", error);
-                alert("Failed to write to file.");
+                const buffer = new Uint8Array(await file.arrayBuffer());
+                await window.db.registerFileBuffer('import.csv', buffer);
+                
+                const conn = await window.db.connect();
+                await conn.query(`INSERT INTO transactions SELECT * FROM read_csv_auto('import.csv');`);
+                await conn.close();
+                
+                await persistDB();
+                updateDashboard();
+                alert("Data imported successfully!");
+                event.target.value = ''; // Reset input
+            } catch(err) {
+                console.error(err);
+                alert("Import failed. Ensure the CSV format matches VaultPro's schema.");
             }
-        }
-
-        const fallbackData = localStorage.getItem('financeData');
-        if (fallbackData) {
-            try { 
-                data = JSON.parse(fallbackData); 
-                if (!data.categories) data.categories = [...defaultCategories];
-                if (!data.paymentMethods) data.paymentMethods = [...defaultPaymentMethods];
-            } catch(e){}
-        }
+        };
 
         // ==========================================
         // UI & NAVIGATION
@@ -577,43 +596,41 @@
         function populateLists() {
             const categorySelect = document.getElementById('category');
             categorySelect.innerHTML = '';
-            data.categories.sort().forEach(cat => {
+            settingsData.categories.sort().forEach(cat => {
                 const opt = document.createElement('option'); opt.value = cat; opt.text = cat;
                 categorySelect.add(opt);
             });
 
             const masterCatList = document.getElementById('master-categories-list');
             masterCatList.innerHTML = '';
-            data.categories.forEach(cat => {
+            settingsData.categories.forEach(cat => {
                 const pill = document.createElement('span'); pill.className = 'badge-pill mb-2'; pill.innerText = cat;
                 masterCatList.appendChild(pill);
             });
 
             const paymentMethodSelect = document.getElementById('payment-method');
             paymentMethodSelect.innerHTML = '';
-            data.paymentMethods.sort().forEach(pm => {
+            settingsData.paymentMethods.sort().forEach(pm => {
                 const opt = document.createElement('option'); opt.value = pm; opt.text = pm;
                 paymentMethodSelect.add(opt);
             });
 
             const masterPMList = document.getElementById('master-payment-methods-list');
             masterPMList.innerHTML = '';
-            data.paymentMethods.forEach(pm => {
+            settingsData.paymentMethods.forEach(pm => {
                 const pill = document.createElement('span'); pill.className = 'badge-pill mb-2 border-pink-500/30 bg-pink-500/10 text-pink-200'; pill.innerText = pm;
                 masterPMList.appendChild(pill);
             });
         }
         
-        function handleMonthChange(val) {
+        window.handleMonthChange = function(val) {
             if (!val) return;
             currentGlobalMonth = val;
             updateDashboard();
-            if(document.getElementById('transactions').classList.contains('active')) {
-                refreshTxnViews();
-            }
-        }
+            if(document.getElementById('transactions').classList.contains('active')) refreshTxnViews();
+        };
 
-        function switchTab(tabId) {
+        window.switchTab = function(tabId) {
             document.querySelectorAll('.section-view').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.desktop-nav-btn, .mobile-nav-btn').forEach(el => el.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
@@ -628,27 +645,24 @@
             }
 
             if(tabId === 'dashboard') updateDashboard();
-            if(tabId === 'transactions') {
-                refreshTxnViews();
-            }
+            if(tabId === 'transactions') refreshTxnViews();
             if(tabId === 'settings') {
-                document.getElementById('monthly-budget-input').value = data.monthlyBudget || 0;
-                document.getElementById('update-bal-ubi').value = data.accounts.UBI || 0;
-                document.getElementById('update-bal-hdfc').value = data.accounts.HDFC || 0;
-                document.getElementById('update-bal-axis').value = data.accounts.Axis || 0;
-                calculateLiveTotal();
+                document.getElementById('monthly-budget-input').value = settingsData.monthlyBudget || 0;
+                document.getElementById('update-bal-ubi').value = settingsData.initialAccounts.UBI || 0;
+                document.getElementById('update-bal-hdfc').value = settingsData.initialAccounts.HDFC || 0;
+                document.getElementById('update-bal-axis').value = settingsData.initialAccounts.Axis || 0;
             }
-        }
+        };
 
-        function refreshTxnViews() {
+        window.refreshTxnViews = function() {
             renderTxnSummary();
             renderTransactionsTable();
             if(!document.getElementById('view-graph').classList.contains('hidden')) {
                 renderAnalytics();
             }
-        }
+        };
 
-        function setTxnView(view) {
+        window.setTxnView = function(view) {
             const btnTable = document.getElementById('btn-view-table');
             const btnGraph = document.getElementById('btn-view-graph');
             const viewTable = document.getElementById('view-table');
@@ -667,52 +681,31 @@
                 viewTable.classList.add('hidden');
                 renderAnalytics(); 
             }
-        }
-
-        function calculateLiveTotal() {
-            const u = parseFloat(document.getElementById('update-bal-ubi').value) || 0;
-            const h = parseFloat(document.getElementById('update-bal-hdfc').value) || 0;
-            const a = parseFloat(document.getElementById('update-bal-axis').value) || 0;
-            document.getElementById('total-balance-settings').innerText = '₹' + (u + h + a).toLocaleString('en-IN');
-        }
-
-        ['update-bal-ubi', 'update-bal-hdfc', 'update-bal-axis'].forEach(id => {
-            document.getElementById(id).addEventListener('input', calculateLiveTotal);
-        });
+        };
 
         // ==========================================
         // EDIT AND DELETE TRANSACTIONS
         // ==========================================
-        async function deleteTransaction(id) {
+        window.deleteTransaction = async function(id) {
             if (!confirm("Are you sure you want to delete this transaction?")) return;
-            
-            const index = data.transactions.findIndex(t => t.id === id);
-            if (index > -1) {
-                const t = data.transactions[index];
-                if (t.type === 'expense') data.accounts[t.account] += t.amount;
-                else data.accounts[t.account] -= t.amount;
-                
-                data.transactions.splice(index, 1);
-                await saveToFile();
-                
-                updateDashboard();
-                refreshTxnViews();
-            }
-        }
+            await queryDB(`DELETE FROM transactions WHERE id = ${id}`);
+            await persistDB();
+            updateDashboard();
+            refreshTxnViews();
+        };
 
-        function editTransaction(id) {
-            const t = data.transactions.find(t => t.id === id);
-            if (t) {
+        window.editTransaction = async function(id) {
+            const result = await queryDB(`SELECT * FROM transactions WHERE id = ${id}`);
+            if (result.length > 0) {
+                const t = result[0];
                 editingTransactionId = id;
                 document.getElementById('type').value = t.type;
-                document.getElementById('date').value = t.date;
+                document.getElementById('date').value = t.txn_date;
                 document.getElementById('amount').value = t.amount;
                 document.getElementById('account').value = t.account;
                 document.getElementById('category').value = t.category;
                 
-                if (t.paymentMethod) {
-                    document.getElementById('payment-method').value = t.paymentMethod;
-                }
+                if (t.paymentMethod) document.getElementById('payment-method').value = t.paymentMethod;
                 
                 document.getElementById('insert-title').innerText = 'Edit Record';
                 const btn = document.getElementById('save-btn');
@@ -720,46 +713,39 @@
                 
                 switchTab('insert');
             }
-        }
+        };
 
         // ==========================================
         // FORM SUBMISSIONS
         // ==========================================
         document.getElementById('transaction-form').addEventListener('submit', async function(e) {
             e.preventDefault();
-            if (!fileHandle) alert("Notice: No file connected. Saving to browser cache.");
             
             const amountVal = parseFloat(document.getElementById('amount').value);
-            const accountVal = document.getElementById('account').value;
-            const typeVal = document.getElementById('type').value;
-            const paymentMethodVal = document.getElementById('payment-method').value;
+            const accountVal = document.getElementById('account').value.replace(/'/g, "''");
+            const typeVal = document.getElementById('type').value.replace(/'/g, "''");
+            const paymentMethodVal = document.getElementById('payment-method').value.replace(/'/g, "''");
+            const categoryVal = document.getElementById('category').value.replace(/'/g, "''");
+            const dateVal = document.getElementById('date').value;
 
             if (editingTransactionId) {
-                const oldIndex = data.transactions.findIndex(t => t.id === editingTransactionId);
-                if (oldIndex > -1) {
-                    const oldT = data.transactions[oldIndex];
-                    if (oldT.type === 'expense') data.accounts[oldT.account] += oldT.amount;
-                    else data.accounts[oldT.account] -= oldT.amount;
-                    data.transactions.splice(oldIndex, 1);
-                }
+                await queryDB(`
+                    UPDATE transactions 
+                    SET type='${typeVal}', amount=${amountVal}, account='${accountVal}', 
+                        category='${categoryVal}', paymentMethod='${paymentMethodVal}', txn_date='${dateVal}'
+                    WHERE id=${editingTransactionId}
+                `);
+            } else {
+                const id = Date.now();
+                await queryDB(`
+                    INSERT INTO transactions VALUES (
+                        ${id}, '${typeVal}', ${amountVal}, '${accountVal}', 
+                        '${categoryVal}', '${paymentMethodVal}', '${dateVal}'
+                    )
+                `);
             }
             
-            const trans = {
-                id: editingTransactionId ? editingTransactionId : Date.now(),
-                type: typeVal,
-                amount: amountVal,
-                account: accountVal,
-                category: document.getElementById('category').value,
-                paymentMethod: paymentMethodVal,
-                date: document.getElementById('date').value
-            };
-
-            if (trans.type === 'expense') data.accounts[accountVal] -= amountVal;
-            else data.accounts[accountVal] += amountVal;
-            
-            data.transactions.push(trans);
-            await saveToFile();
-            
+            await persistDB();
             editingTransactionId = null;
             document.getElementById('insert-title').innerText = 'Add New Record';
 
@@ -775,10 +761,10 @@
             }, 1500);
         });
 
-        document.getElementById('budget-form').addEventListener('submit', async function(e) {
+        document.getElementById('budget-form').addEventListener('submit', function(e) {
             e.preventDefault();
-            data.monthlyBudget = parseFloat(document.getElementById('monthly-budget-input').value);
-            await saveToFile();
+            settingsData.monthlyBudget = parseFloat(document.getElementById('monthly-budget-input').value);
+            saveSettings();
             updateDashboard();
             
             const btn = document.getElementById('save-budget-btn');
@@ -791,12 +777,12 @@
             }, 1500);
         });
 
-        document.getElementById('balances-form').addEventListener('submit', async function(e) {
+        document.getElementById('balances-form').addEventListener('submit', function(e) {
             e.preventDefault();
-            data.accounts.UBI = parseFloat(document.getElementById('update-bal-ubi').value) || 0;
-            data.accounts.HDFC = parseFloat(document.getElementById('update-bal-hdfc').value) || 0;
-            data.accounts.Axis = parseFloat(document.getElementById('update-bal-axis').value) || 0;
-            await saveToFile();
+            settingsData.initialAccounts.UBI = parseFloat(document.getElementById('update-bal-ubi').value) || 0;
+            settingsData.initialAccounts.HDFC = parseFloat(document.getElementById('update-bal-hdfc').value) || 0;
+            settingsData.initialAccounts.Axis = parseFloat(document.getElementById('update-bal-axis').value) || 0;
+            saveSettings();
             updateDashboard();
             
             const btn = document.getElementById('save-balances-btn');
@@ -809,13 +795,13 @@
             }, 1500);
         });
 
-        document.getElementById('category-form').addEventListener('submit', async function(e) {
+        document.getElementById('category-form').addEventListener('submit', function(e) {
             e.preventDefault();
             const inputEl = document.getElementById('new-category-input');
             const newCat = inputEl.value.trim();
-            if(newCat && !data.categories.some(c => c.toLowerCase() === newCat.toLowerCase())) {
-                data.categories.push(newCat);
-                await saveToFile();
+            if(newCat && !settingsData.categories.some(c => c.toLowerCase() === newCat.toLowerCase())) {
+                settingsData.categories.push(newCat);
+                saveSettings();
                 populateLists(); 
                 inputEl.value = '';
                 const btn = document.getElementById('save-category-btn');
@@ -826,16 +812,16 @@
                     btn.innerHTML = orig;
                     btn.classList.replace('from-emerald-500', 'from-secondary'); btn.classList.replace('to-emerald-600', 'to-pink-600');
                 }, 1500);
-            } else { alert("Category exists or is invalid."); }
+            }
         });
 
-        document.getElementById('payment-method-form').addEventListener('submit', async function(e) {
+        document.getElementById('payment-method-form').addEventListener('submit', function(e) {
             e.preventDefault();
             const inputEl = document.getElementById('new-payment-method-input');
             const newPM = inputEl.value.trim();
-            if(newPM && !data.paymentMethods.some(p => p.toLowerCase() === newPM.toLowerCase())) {
-                data.paymentMethods.push(newPM);
-                await saveToFile();
+            if(newPM && !settingsData.paymentMethods.some(p => p.toLowerCase() === newPM.toLowerCase())) {
+                settingsData.paymentMethods.push(newPM);
+                saveSettings();
                 populateLists(); 
                 inputEl.value = '';
                 const btn = document.getElementById('save-payment-method-btn');
@@ -846,81 +832,115 @@
                     btn.innerHTML = orig;
                     btn.classList.replace('from-emerald-500', 'from-secondary'); btn.classList.replace('to-emerald-600', 'to-pink-600');
                 }, 1500);
-            } else { alert("Payment Method exists or is invalid."); }
+            }
         });
 
         // ==========================================
-        // RENDER ENGINES
+        // DUCKDB SQL RENDER ENGINES
         // ==========================================
-        function updateDashboard() {
-            const today = new Date();
-            const todayStr = today.toISOString().split('T')[0];
-            const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+        async function updateDashboard() {
+            if(!window.db) return;
+            
+            const todayStr = new Date().toISOString().split('T')[0];
+            const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
             const yesterdayStr = yesterday.toISOString().split('T')[0];
             
-            // Today and Yesterday are always absolute real-world dates
-            const todaySpend = data.transactions.filter(t => t.date === todayStr && t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-            const yesterdaySpend = data.transactions.filter(t => t.date === yesterdayStr && t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-            
-            // Month expense reflects the GLOBAL filter
-            const monthExpense = data.transactions.filter(t => t.date.startsWith(currentGlobalMonth) && t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-            const remainingBudget = (data.monthlyBudget || 0) - monthExpense;
-            
-            // Account Balances are an absolute snapshot of current reality
-            const totalBal = (data.accounts.UBI || 0) + (data.accounts.HDFC || 0) + (data.accounts.Axis || 0);
+            // SQL queries for Dashboard stats
+            const stats = await queryDB(`
+                SELECT 
+                    SUM(CASE WHEN txn_date = '${todayStr}' AND type='expense' THEN amount ELSE 0 END) as today_spend,
+                    SUM(CASE WHEN txn_date = '${yesterdayStr}' AND type='expense' THEN amount ELSE 0 END) as yesterday_spend,
+                    SUM(CASE WHEN txn_date LIKE '${currentGlobalMonth}%' AND type='expense' THEN amount ELSE 0 END) as month_spend
+                FROM transactions
+            `);
 
-            document.getElementById('display-monthly-budget').innerText = '₹' + (data.monthlyBudget || 0).toLocaleString('en-IN');
-            document.getElementById('today-spend').innerText = '₹' + todaySpend.toLocaleString('en-IN');
-            document.getElementById('yesterday-spend').innerText = '₹' + yesterdaySpend.toLocaleString('en-IN');
-            document.getElementById('month-expense').innerText = '₹' + monthExpense.toLocaleString('en-IN');
+            const diffs = await queryDB(`
+                SELECT account, SUM(CASE WHEN type='income' THEN amount ELSE -amount END) as diff
+                FROM transactions GROUP BY account
+            `);
+
+            const s = stats[0] || { today_spend: 0, yesterday_spend: 0, month_spend: 0 };
+            const remainingBudget = (settingsData.monthlyBudget || 0) - (s.month_spend || 0);
+
+            // Compute Live Balances
+            let actUBI = settingsData.initialAccounts.UBI || 0;
+            let actHDFC = settingsData.initialAccounts.HDFC || 0;
+            let actAxis = settingsData.initialAccounts.Axis || 0;
+
+            diffs.forEach(d => {
+                if(d.account === 'UBI') actUBI += d.diff;
+                if(d.account === 'HDFC') actHDFC += d.diff;
+                if(d.account === 'Axis') actAxis += d.diff;
+            });
+            const totalBal = actUBI + actHDFC + actAxis;
+
+            document.getElementById('display-monthly-budget').innerText = '₹' + (settingsData.monthlyBudget || 0).toLocaleString('en-IN');
+            document.getElementById('today-spend').innerText = '₹' + (s.today_spend || 0).toLocaleString('en-IN');
+            document.getElementById('yesterday-spend').innerText = '₹' + (s.yesterday_spend || 0).toLocaleString('en-IN');
+            document.getElementById('month-expense').innerText = '₹' + (s.month_spend || 0).toLocaleString('en-IN');
             document.getElementById('remaining-budget').innerText = '₹' + remainingBudget.toLocaleString('en-IN');
             
-            document.getElementById('bal-ubi').innerText = '₹' + (data.accounts.UBI || 0).toLocaleString('en-IN');
-            document.getElementById('bal-hdfc').innerText = '₹' + (data.accounts.HDFC || 0).toLocaleString('en-IN');
-            document.getElementById('bal-axis').innerText = '₹' + (data.accounts.Axis || 0).toLocaleString('en-IN');
-            document.getElementById('total-balance-dash').innerText = '₹' + totalBal.toLocaleString('en-IN');
-            document.getElementById('total-balance-settings').innerText = '₹' + totalBal.toLocaleString('en-IN');
+            document.getElementById('bal-ubi').innerText = '₹' + actUBI.toLocaleString('en-IN');
+            document.getElementById('bal-hdfc').innerText = '₹' + actHDFC.toLocaleString('en-IN');
+            document.getElementById('bal-axis').innerText = '₹' + actAxis.toLocaleString('en-IN');
         }
         
-        function renderTxnSummary() {
-            let ubiExp = 0, hdfcExp = 0, axisExp = 0;
+        async function renderTxnSummary() {
+            const diffs = await queryDB(`
+                SELECT account, SUM(CASE WHEN type='income' THEN amount ELSE -amount END) as diff
+                FROM transactions GROUP BY account
+            `);
             
-            data.transactions
-                .filter(t => t.date.startsWith(currentGlobalMonth) && t.type === 'expense')
-                .forEach(t => {
-                    if(t.account === 'UBI') ubiExp += t.amount;
-                    if(t.account === 'HDFC') hdfcExp += t.amount;
-                    if(t.account === 'Axis') axisExp += t.amount;
-                });
+            const monthlyOut = await queryDB(`
+                SELECT account, SUM(amount) as out
+                FROM transactions WHERE type='expense' AND txn_date LIKE '${currentGlobalMonth}%' GROUP BY account
+            `);
 
-            document.getElementById('txn-ubi-bal').innerText = '₹' + (data.accounts.UBI || 0).toLocaleString('en-IN');
-            document.getElementById('txn-hdfc-bal').innerText = '₹' + (data.accounts.HDFC || 0).toLocaleString('en-IN');
-            document.getElementById('txn-axis-bal').innerText = '₹' + (data.accounts.Axis || 0).toLocaleString('en-IN');
+            let actUBI = settingsData.initialAccounts.UBI || 0;
+            let actHDFC = settingsData.initialAccounts.HDFC || 0;
+            let actAxis = settingsData.initialAccounts.Axis || 0;
 
-            document.getElementById('txn-ubi-exp').innerText = 'Out: ₹' + ubiExp.toLocaleString('en-IN');
-            document.getElementById('txn-hdfc-exp').innerText = 'Out: ₹' + hdfcExp.toLocaleString('en-IN');
-            document.getElementById('txn-axis-exp').innerText = 'Out: ₹' + axisExp.toLocaleString('en-IN');
+            diffs.forEach(d => {
+                if(d.account === 'UBI') actUBI += d.diff;
+                if(d.account === 'HDFC') actHDFC += d.diff;
+                if(d.account === 'Axis') actAxis += d.diff;
+            });
+
+            let outUBI = 0, outHDFC = 0, outAxis = 0;
+            monthlyOut.forEach(d => {
+                if(d.account === 'UBI') outUBI = d.out;
+                if(d.account === 'HDFC') outHDFC = d.out;
+                if(d.account === 'Axis') outAxis = d.out;
+            });
+
+            document.getElementById('txn-ubi-bal').innerText = '₹' + actUBI.toLocaleString('en-IN');
+            document.getElementById('txn-hdfc-bal').innerText = '₹' + actHDFC.toLocaleString('en-IN');
+            document.getElementById('txn-axis-bal').innerText = '₹' + actAxis.toLocaleString('en-IN');
+
+            document.getElementById('txn-ubi-exp').innerText = 'Out: ₹' + outUBI.toLocaleString('en-IN');
+            document.getElementById('txn-hdfc-exp').innerText = 'Out: ₹' + outHDFC.toLocaleString('en-IN');
+            document.getElementById('txn-axis-exp').innerText = 'Out: ₹' + outAxis.toLocaleString('en-IN');
         }
 
-        function renderTransactionsTable() {
+        async function renderTransactionsTable() {
             const list = document.getElementById('transactions-list');
             list.innerHTML = '';
             
             const accountFilter = document.getElementById('txn-account-filter').value;
+            let query = `SELECT * FROM transactions WHERE txn_date LIKE '${currentGlobalMonth}%'`;
+            if (accountFilter !== 'all') {
+                query += ` AND account = '${accountFilter}'`;
+            }
+            query += ` ORDER BY txn_date DESC, id DESC`;
 
-            // Filter by the selected Global Month AND selected Bank
-            const filteredTxns = data.transactions
-                .filter(t => t.date.startsWith(currentGlobalMonth))
-                .filter(t => accountFilter === 'all' || t.account === accountFilter);
+            const txns = await queryDB(query);
 
-            if (!filteredTxns || filteredTxns.length === 0) {
-                list.innerHTML = '<div class="text-center text-gray-400 py-10">No transactions found for these filters.</div>';
+            if (txns.length === 0) {
+                list.innerHTML = '<div class="text-center text-gray-400 py-10">No transactions found.</div>';
                 return;
             }
 
-            const sortedTxns = [...filteredTxns].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-            sortedTxns.forEach(t => {
+            txns.forEach(t => {
                 const isExp = t.type === 'expense';
                 const sign = isExp ? '-' : '+';
                 const color = isExp ? 'text-red-400' : 'text-emerald-400';
@@ -939,14 +959,14 @@
                         </div>
                         <div>
                             <p class="font-bold text-sm md:text-base">${t.category}</p>
-                            <p class="text-[10px] md:text-xs text-gray-400">${t.date} • ${t.account}${pmText}</p>
+                            <p class="text-[10px] md:text-xs text-gray-400">${t.txn_date} • ${t.account}${pmText}</p>
                         </div>
                     </div>
                     <div class="flex flex-col items-end gap-1 md:gap-2">
                         <p class="font-bold ${color} text-sm md:text-base">${sign}₹${t.amount.toLocaleString('en-IN')}</p>
                         <div class="flex gap-3">
-                            <button onclick="editTransaction(${t.id})" class="text-gray-400 hover:text-blue-400 transition-colors"><i class="fa-solid fa-pen text-xs md:text-sm"></i></button>
-                            <button onclick="deleteTransaction(${t.id})" class="text-gray-400 hover:text-red-400 transition-colors"><i class="fa-solid fa-trash text-xs md:text-sm"></i></button>
+                            <button onclick="editTransaction(${Number(t.id)})" class="text-gray-400 hover:text-blue-400 transition-colors"><i class="fa-solid fa-pen text-xs md:text-sm"></i></button>
+                            <button onclick="deleteTransaction(${Number(t.id)})" class="text-gray-400 hover:text-red-400 transition-colors"><i class="fa-solid fa-trash text-xs md:text-sm"></i></button>
                         </div>
                     </div>
                 `;
@@ -955,65 +975,49 @@
         }
 
         let chartInstance = null;
-        function renderAnalytics() {
+        async function renderAnalytics() {
             const ctx = document.getElementById('expenseChart').getContext('2d');
             const accountFilter = document.getElementById('txn-account-filter').value;
-            const categoryTotals = {};
             
-            // Apply both filters: Global Month AND Selected Bank
-            data.transactions
-                .filter(t => t.type === 'expense')
-                .filter(t => t.date.startsWith(currentGlobalMonth))
-                .filter(t => accountFilter === 'all' || t.account === accountFilter)
-                .forEach(t => { 
-                    categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount; 
-                });
+            let query = `
+                SELECT category, SUM(amount) as total 
+                FROM transactions 
+                WHERE type='expense' AND txn_date LIKE '${currentGlobalMonth}%'
+            `;
+            if (accountFilter !== 'all') query += ` AND account = '${accountFilter}'`;
+            query += ` GROUP BY category`;
+
+            const catData = await queryDB(query);
             
             if (chartInstance) chartInstance.destroy();
             
             Chart.defaults.color = '#94a3b8'; 
             Chart.defaults.font.family = 'Outfit';
-            const labels = Object.keys(categoryTotals).length ? Object.keys(categoryTotals) : ['No Data'];
-            const values = Object.keys(categoryTotals).length ? Object.values(categoryTotals) : [1];
+            
+            const labels = catData.length ? catData.map(r => r.category) : ['No Data'];
+            const values = catData.length ? catData.map(r => r.total) : [1];
 
             const vibrantColors = ['#6366f1', '#ec4899', '#14b8a6', '#f59e0b', '#8b5cf6', '#ef4444', '#10b981', '#3b82f6', '#f43f5e', '#84cc16'];
-            const displayColors = Object.keys(categoryTotals).length ? vibrantColors : ['#334155'];
+            const displayColors = catData.length ? vibrantColors : ['#334155'];
 
             chartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: labels,
-                    datasets: [{
-                        data: values,
-                        backgroundColor: displayColors,
-                        borderWidth: 0,
-                        hoverOffset: 6
-                    }]
+                    datasets: [{ data: values, backgroundColor: displayColors, borderWidth: 0, hoverOffset: 6 }]
                 },
                 options: {
-                    responsive: true, 
-                    maintainAspectRatio: false,
-                    cutout: '70%',
+                    responsive: true, maintainAspectRatio: false, cutout: '70%',
                     plugins: { 
-                        legend: { 
-                            position: window.innerWidth < 768 ? 'bottom' : 'right', 
-                            labels: { color: '#f8fafc', padding: 20, font: {family: 'Outfit', size: 12} } 
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    if(labels[0] === 'No Data') return ' No expenses';
-                                    return ' ₹' + context.raw.toLocaleString('en-IN');
-                                }
-                            }
-                        }
+                        legend: { position: window.innerWidth < 768 ? 'bottom' : 'right', labels: { color: '#f8fafc', padding: 20, font: {family: 'Outfit', size: 12} } },
+                        tooltip: { callbacks: { label: function(context) {
+                            if(labels[0] === 'No Data') return ' No expenses';
+                            return ' ₹' + context.raw.toLocaleString('en-IN');
+                        }}}
                     }
                 }
             });
         }
-
-        populateLists(); updateDashboard();
-        document.getElementById('date').value = new Date().toISOString().split('T')[0];
 
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
