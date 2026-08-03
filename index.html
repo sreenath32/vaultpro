@@ -267,28 +267,47 @@
                 </div>
             </div>
 
-            <!-- Global Bank Filter for Transactions & Analytics -->
+            <!-- Bank Wise Summary (Always visible) -->
+            <div class="grid grid-cols-3 gap-2 md:gap-4 mb-4">
+                <div class="glass p-2 md:p-3 rounded-xl border-t-2 border-blue-500 text-center md:text-left">
+                    <p class="text-[9px] md:text-xs text-gray-400 uppercase tracking-wider mb-1">UBI</p>
+                    <h4 class="text-xs md:text-lg font-bold text-white truncate" id="txn-ubi-bal">₹0</h4>
+                    <p class="text-[9px] md:text-xs text-red-400 mt-0.5 truncate" id="txn-ubi-exp">Out: ₹0</p>
+                </div>
+                <div class="glass p-2 md:p-3 rounded-xl border-t-2 border-red-500 text-center md:text-left">
+                    <p class="text-[9px] md:text-xs text-gray-400 uppercase tracking-wider mb-1">HDFC</p>
+                    <h4 class="text-xs md:text-lg font-bold text-white truncate" id="txn-hdfc-bal">₹0</h4>
+                    <p class="text-[9px] md:text-xs text-red-400 mt-0.5 truncate" id="txn-hdfc-exp">Out: ₹0</p>
+                </div>
+                <div class="glass p-2 md:p-3 rounded-xl border-t-2 border-pink-500 text-center md:text-left">
+                    <p class="text-[9px] md:text-xs text-gray-400 uppercase tracking-wider mb-1">Axis</p>
+                    <h4 class="text-xs md:text-lg font-bold text-white truncate" id="txn-axis-bal">₹0</h4>
+                    <p class="text-[9px] md:text-xs text-red-400 mt-0.5 truncate" id="txn-axis-exp">Out: ₹0</p>
+                </div>
+            </div>
+
+            <!-- Global Bank Filter for Table & Graph -->
             <div class="flex justify-end mb-4">
                 <div class="relative">
                     <select id="txn-account-filter" class="input-glass rounded-lg px-4 py-2 pr-8 text-xs md:text-sm appearance-none outline-none cursor-pointer" onchange="refreshTxnViews()">
-                        <option value="all">All Accounts</option>
-                        <option value="UBI">Union Bank of India</option>
-                        <option value="HDFC">HDFC</option>
-                        <option value="Axis">Axis</option>
+                        <option value="all">All Accounts Filter</option>
+                        <option value="UBI">Show UBI Only</option>
+                        <option value="HDFC">Show HDFC Only</option>
+                        <option value="Axis">Show Axis Only</option>
                     </select>
                     <i class="fa-solid fa-chevron-down absolute right-3 top-2.5 text-gray-400 text-xs pointer-events-none"></i>
                 </div>
             </div>
 
             <!-- TABLE VIEW -->
-            <div id="view-table" class="glass rounded-2xl flex flex-col h-[55vh] overflow-hidden">
+            <div id="view-table" class="glass rounded-2xl flex flex-col h-[48vh] overflow-hidden">
                 <div class="overflow-y-auto p-3 md:p-5 space-y-3" id="transactions-list">
                     <!-- Dynamic Transaction Cards Load Here -->
                 </div>
             </div>
 
             <!-- GRAPH VIEW -->
-            <div id="view-graph" class="hidden glass p-4 md:p-8 rounded-2xl flex flex-col items-center w-full min-h-[55vh]">
+            <div id="view-graph" class="hidden glass p-4 md:p-8 rounded-2xl flex flex-col items-center w-full min-h-[48vh]">
                 <!-- Doughnut Canvas -->
                 <div class="w-full max-w-lg aspect-square mt-2 relative">
                     <canvas id="expenseChart"></canvas>
@@ -622,6 +641,7 @@
         }
 
         function refreshTxnViews() {
+            renderTxnSummary();
             renderTransactionsTable();
             if(!document.getElementById('view-graph').classList.contains('hidden')) {
                 renderAnalytics();
@@ -860,6 +880,26 @@
             document.getElementById('bal-axis').innerText = '₹' + (data.accounts.Axis || 0).toLocaleString('en-IN');
             document.getElementById('total-balance-dash').innerText = '₹' + totalBal.toLocaleString('en-IN');
             document.getElementById('total-balance-settings').innerText = '₹' + totalBal.toLocaleString('en-IN');
+        }
+        
+        function renderTxnSummary() {
+            let ubiExp = 0, hdfcExp = 0, axisExp = 0;
+            
+            data.transactions
+                .filter(t => t.date.startsWith(currentGlobalMonth) && t.type === 'expense')
+                .forEach(t => {
+                    if(t.account === 'UBI') ubiExp += t.amount;
+                    if(t.account === 'HDFC') hdfcExp += t.amount;
+                    if(t.account === 'Axis') axisExp += t.amount;
+                });
+
+            document.getElementById('txn-ubi-bal').innerText = '₹' + (data.accounts.UBI || 0).toLocaleString('en-IN');
+            document.getElementById('txn-hdfc-bal').innerText = '₹' + (data.accounts.HDFC || 0).toLocaleString('en-IN');
+            document.getElementById('txn-axis-bal').innerText = '₹' + (data.accounts.Axis || 0).toLocaleString('en-IN');
+
+            document.getElementById('txn-ubi-exp').innerText = 'Out: ₹' + ubiExp.toLocaleString('en-IN');
+            document.getElementById('txn-hdfc-exp').innerText = 'Out: ₹' + hdfcExp.toLocaleString('en-IN');
+            document.getElementById('txn-axis-exp').innerText = 'Out: ₹' + axisExp.toLocaleString('en-IN');
         }
 
         function renderTransactionsTable() {
