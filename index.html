@@ -257,7 +257,7 @@
 
         <!-- TRANSACTIONS (ANALYTICS) TAB -->
         <div id="transactions" class="section-view">
-            <div class="flex flex-col md:flex-row md:justify-between items-start md:items-center gap-4 mb-6 md:mb-8">
+            <div class="flex flex-col md:flex-row md:justify-between items-start md:items-center gap-4 mb-4">
                 <h2 class="text-2xl md:text-3xl font-bold">Transactions</h2>
                 
                 <!-- Toggle Switch -->
@@ -267,29 +267,28 @@
                 </div>
             </div>
 
+            <!-- Global Bank Filter for Transactions & Analytics -->
+            <div class="flex justify-end mb-4">
+                <div class="relative">
+                    <select id="txn-account-filter" class="input-glass rounded-lg px-4 py-2 pr-8 text-xs md:text-sm appearance-none outline-none cursor-pointer" onchange="refreshTxnViews()">
+                        <option value="all">All Accounts</option>
+                        <option value="UBI">Union Bank of India</option>
+                        <option value="HDFC">HDFC</option>
+                        <option value="Axis">Axis</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-3 top-2.5 text-gray-400 text-xs pointer-events-none"></i>
+                </div>
+            </div>
+
             <!-- TABLE VIEW -->
-            <div id="view-table" class="glass rounded-2xl flex flex-col h-[60vh] overflow-hidden">
+            <div id="view-table" class="glass rounded-2xl flex flex-col h-[55vh] overflow-hidden">
                 <div class="overflow-y-auto p-3 md:p-5 space-y-3" id="transactions-list">
                     <!-- Dynamic Transaction Cards Load Here -->
                 </div>
             </div>
 
             <!-- GRAPH VIEW -->
-            <div id="view-graph" class="hidden glass p-4 md:p-8 rounded-2xl flex flex-col items-center w-full min-h-[60vh]">
-                
-                <!-- Bank Filter Dropdown -->
-                <div class="w-full flex justify-end mb-4">
-                    <div class="relative">
-                        <select id="analytics-account-filter" class="input-glass rounded-lg px-4 py-2 pr-8 text-xs md:text-sm appearance-none outline-none cursor-pointer" onchange="renderAnalytics()">
-                            <option value="all">All Accounts</option>
-                            <option value="UBI">Union Bank of India</option>
-                            <option value="HDFC">HDFC</option>
-                            <option value="Axis">Axis</option>
-                        </select>
-                        <i class="fa-solid fa-chevron-down absolute right-3 top-2.5 text-gray-400 text-xs pointer-events-none"></i>
-                    </div>
-                </div>
-
+            <div id="view-graph" class="hidden glass p-4 md:p-8 rounded-2xl flex flex-col items-center w-full min-h-[55vh]">
                 <!-- Doughnut Canvas -->
                 <div class="w-full max-w-lg aspect-square mt-2 relative">
                     <canvas id="expenseChart"></canvas>
@@ -518,8 +517,7 @@
             populateLists(); 
             
             if(document.getElementById('transactions').classList.contains('active')) {
-                renderTransactionsTable();
-                renderAnalytics();
+                refreshTxnViews();
             }
             
             if(document.getElementById('settings').classList.contains('active')) {
@@ -592,8 +590,7 @@
             currentGlobalMonth = val;
             updateDashboard();
             if(document.getElementById('transactions').classList.contains('active')) {
-                renderTransactionsTable();
-                renderAnalytics();
+                refreshTxnViews();
             }
         }
 
@@ -613,8 +610,7 @@
 
             if(tabId === 'dashboard') updateDashboard();
             if(tabId === 'transactions') {
-                renderTransactionsTable();
-                renderAnalytics();
+                refreshTxnViews();
             }
             if(tabId === 'settings') {
                 document.getElementById('monthly-budget-input').value = data.monthlyBudget || 0;
@@ -622,6 +618,13 @@
                 document.getElementById('update-bal-hdfc').value = data.accounts.HDFC || 0;
                 document.getElementById('update-bal-axis').value = data.accounts.Axis || 0;
                 calculateLiveTotal();
+            }
+        }
+
+        function refreshTxnViews() {
+            renderTransactionsTable();
+            if(!document.getElementById('view-graph').classList.contains('hidden')) {
+                renderAnalytics();
             }
         }
 
@@ -672,9 +675,8 @@
                 data.transactions.splice(index, 1);
                 await saveToFile();
                 
-                renderTransactionsTable();
                 updateDashboard();
-                if(!document.getElementById('view-graph').classList.contains('hidden')) renderAnalytics();
+                refreshTxnViews();
             }
         }
 
@@ -864,11 +866,15 @@
             const list = document.getElementById('transactions-list');
             list.innerHTML = '';
             
-            // Filter by the selected Global Month
-            const filteredTxns = data.transactions.filter(t => t.date.startsWith(currentGlobalMonth));
+            const accountFilter = document.getElementById('txn-account-filter').value;
+
+            // Filter by the selected Global Month AND selected Bank
+            const filteredTxns = data.transactions
+                .filter(t => t.date.startsWith(currentGlobalMonth))
+                .filter(t => accountFilter === 'all' || t.account === accountFilter);
 
             if (!filteredTxns || filteredTxns.length === 0) {
-                list.innerHTML = '<div class="text-center text-gray-400 py-10">No transactions found for this month.</div>';
+                list.innerHTML = '<div class="text-center text-gray-400 py-10">No transactions found for these filters.</div>';
                 return;
             }
 
@@ -911,7 +917,7 @@
         let chartInstance = null;
         function renderAnalytics() {
             const ctx = document.getElementById('expenseChart').getContext('2d');
-            const accountFilter = document.getElementById('analytics-account-filter').value;
+            const accountFilter = document.getElementById('txn-account-filter').value;
             const categoryTotals = {};
             
             // Apply both filters: Global Month AND Selected Bank
