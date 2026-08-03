@@ -43,26 +43,11 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
-        /* Desktop Active Tab */
-        .desktop-nav-btn.active {
-            background: rgba(99, 102, 241, 0.2);
-            border-right: 4px solid #6366f1;
-            color: white;
-        }
-        
-        /* Mobile Active Tab */
-        .mobile-nav-btn.active {
-            color: #6366f1;
-            transform: scale(1.1);
-        }
-
-        .input-glass {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white;
-        }
+        .desktop-nav-btn.active { background: rgba(99, 102, 241, 0.2); border-right: 4px solid #6366f1; color: white; }
+        .mobile-nav-btn.active { color: #6366f1; transform: scale(1.1); }
+        .input-glass { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: white; }
         .input-glass:focus { outline: none; border-color: #6366f1; background: rgba(255,255,255,0.1); }
-        .input-glass option { color: #0f172a; } /* Fix dropdown text color on mobile */
+        .input-glass option { color: #0f172a; }
         
         .category-pill {
             background: rgba(99, 102, 241, 0.15);
@@ -95,8 +80,8 @@
             <button onclick="switchTab('insert')" data-tab="insert" class="desktop-nav-btn flex items-center gap-4 px-4 py-3 rounded-lg text-gray-400 hover:text-white transition-all text-left">
                 <i class="fa-solid fa-plus w-5"></i> Add Record
             </button>
-            <button onclick="switchTab('analytics')" data-tab="analytics" class="desktop-nav-btn flex items-center gap-4 px-4 py-3 rounded-lg text-gray-400 hover:text-white transition-all text-left">
-                <i class="fa-solid fa-chart-radar w-5"></i> Analytics
+            <button onclick="switchTab('transactions')" data-tab="transactions" class="desktop-nav-btn flex items-center gap-4 px-4 py-3 rounded-lg text-gray-400 hover:text-white transition-all text-left">
+                <i class="fa-solid fa-rectangle-list w-5"></i> Transactions
             </button>
             <button onclick="switchTab('settings')" data-tab="settings" class="desktop-nav-btn flex items-center gap-4 px-4 py-3 rounded-lg text-gray-400 hover:text-white transition-all text-left">
                 <i class="fa-solid fa-gear w-5"></i> Settings
@@ -156,7 +141,14 @@
                 </div>
             </div>
 
-            <h3 class="text-lg md:text-xl font-semibold mb-4 md:mb-6">Account Balances</h3>
+            <div class="flex items-center justify-between mb-4 md:mb-6">
+                <h3 class="text-lg md:text-xl font-semibold">Account Balances</h3>
+                <div class="glass px-4 py-1.5 rounded-full flex items-center gap-2">
+                    <span class="text-xs md:text-sm text-gray-400">Total</span>
+                    <span class="font-bold text-emerald-400" id="total-balance-dash">₹0</span>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                 <div class="glass p-5 rounded-2xl border-l-4 md:border-l-0 md:border-t-4 border-blue-500 flex justify-between items-center">
                     <div>
@@ -222,7 +214,6 @@
                     <div>
                         <label class="block text-xs md:text-sm text-gray-400 mb-2">Category</label>
                         <select id="category" class="w-full input-glass rounded-lg px-4 py-3 appearance-none" required>
-                            <!-- Dynamically loaded from master data -->
                         </select>
                     </div>
 
@@ -233,10 +224,27 @@
             </div>
         </div>
 
-        <!-- ANALYTICS TAB -->
-        <div id="analytics" class="section-view">
-            <h2 class="text-2xl md:text-3xl font-bold mb-6 md:mb-8">Category Analytics</h2>
-            <div class="glass p-4 md:p-8 rounded-2xl max-w-4xl mx-auto flex justify-center">
+        <!-- TRANSACTIONS (ANALYTICS) TAB -->
+        <div id="transactions" class="section-view">
+            <div class="flex flex-col md:flex-row md:justify-between items-start md:items-center gap-4 mb-6 md:mb-8">
+                <h2 class="text-2xl md:text-3xl font-bold">Transactions</h2>
+                
+                <!-- Toggle Switch -->
+                <div class="glass p-1 rounded-xl flex gap-1">
+                    <button id="btn-view-table" onclick="setTxnView('table')" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all text-white bg-primary">Table</button>
+                    <button id="btn-view-graph" onclick="setTxnView('graph')" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all text-gray-400 hover:text-white">Graph</button>
+                </div>
+            </div>
+
+            <!-- TABLE VIEW -->
+            <div id="view-table" class="glass rounded-2xl flex flex-col h-[65vh] overflow-hidden">
+                <div class="overflow-y-auto p-3 md:p-5 space-y-3" id="transactions-list">
+                    <!-- Dynamic Transaction Cards Load Here -->
+                </div>
+            </div>
+
+            <!-- GRAPH VIEW -->
+            <div id="view-graph" class="hidden glass p-4 md:p-8 rounded-2xl flex justify-center w-full">
                 <div class="w-full max-w-xl aspect-square md:aspect-auto">
                     <canvas id="expenseRadarChart"></canvas>
                 </div>
@@ -248,8 +256,14 @@
             <h2 class="text-2xl md:text-3xl font-bold mb-6 md:mb-8">Settings</h2>
             <div class="glass p-5 md:p-8 rounded-2xl max-w-2xl">
                 
-                <!-- Account Balances Setup -->
-                <h3 class="text-lg md:text-xl font-semibold mb-4 text-white">Initial Account Balances</h3>
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg md:text-xl font-semibold text-white">Initial Account Balances</h3>
+                    <div class="glass px-4 py-1.5 rounded-full flex items-center gap-2">
+                        <span class="text-xs md:text-sm text-gray-400">Total</span>
+                        <span class="font-bold text-emerald-400" id="total-balance-settings">₹0</span>
+                    </div>
+                </div>
+
                 <form id="balances-form" class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
@@ -270,7 +284,6 @@
                     </button>
                 </form>
 
-                <!-- Budget Settings -->
                 <h3 class="text-lg md:text-xl font-semibold mb-4 text-white mt-8 border-t border-gray-700/50 pt-6 md:pt-8">Financial Goals</h3>
                 <form id="budget-form" class="space-y-4">
                     <div>
@@ -287,7 +300,6 @@
                     </div>
                 </form>
 
-                <!-- Category Settings -->
                 <div class="mt-8 border-t border-gray-700/50 pt-6 md:pt-8">
                     <h3 class="text-lg md:text-xl font-semibold mb-4 text-white">Master Categories</h3>
                     <form id="category-form" class="space-y-4 mb-6">
@@ -301,18 +313,14 @@
                             </div>
                         </div>
                     </form>
-                    
                     <label class="block text-xs md:text-sm text-gray-400 mb-2">Current Master List</label>
-                    <div id="master-categories-list" class="flex flex-wrap gap-2">
-                        <!-- Category pills dynamically loaded here -->
-                    </div>
+                    <div id="master-categories-list" class="flex flex-wrap gap-2"></div>
                 </div>
-
             </div>
         </div>
     </main>
 
-    <!-- MOBILE Bottom Navigation Bar (Hidden on Desktop) -->
+    <!-- MOBILE Bottom Navigation Bar -->
     <nav class="md:hidden fixed bottom-0 left-0 w-full glass flex justify-around items-center p-2 z-50 rounded-t-3xl border-t border-white/5 pb-6">
         <button onclick="switchTab('dashboard')" data-tab="dashboard" class="mobile-nav-btn active flex flex-col items-center gap-1 text-gray-400 p-2 w-16 transition-all duration-300 ease-out">
             <i class="fa-solid fa-chart-pie text-xl"></i>
@@ -322,9 +330,9 @@
             <i class="fa-solid fa-plus text-xl"></i>
             <span class="text-[10px] font-medium tracking-wide mt-1">Add</span>
         </button>
-        <button onclick="switchTab('analytics')" data-tab="analytics" class="mobile-nav-btn flex flex-col items-center gap-1 text-gray-400 p-2 w-16 transition-all duration-300 ease-out">
-            <i class="fa-solid fa-chart-radar text-xl"></i>
-            <span class="text-[10px] font-medium tracking-wide mt-1">Graph</span>
+        <button onclick="switchTab('transactions')" data-tab="transactions" class="mobile-nav-btn flex flex-col items-center gap-1 text-gray-400 p-2 w-16 transition-all duration-300 ease-out">
+            <i class="fa-solid fa-rectangle-list text-xl"></i>
+            <span class="text-[10px] font-medium tracking-wide mt-1">History</span>
         </button>
         <button onclick="switchTab('settings')" data-tab="settings" class="mobile-nav-btn flex flex-col items-center gap-1 text-gray-400 p-2 w-16 transition-all duration-300 ease-out">
             <i class="fa-solid fa-gear text-xl"></i>
@@ -333,54 +341,109 @@
     </nav>
 
     <script>
-        // Data Structure with default categories fallback
         const defaultCategories = ["Groceries", "Rent/Mortgage", "Utilities", "Transportation", "Dining Out", "Entertainment", "Healthcare", "Salary", "Investments", "Miscellaneous"];
         
-        let data = {
-            monthlyBudget: 50000,
-            accounts: { UBI: 0, HDFC: 0, Axis: 0 },
-            transactions: [],
-            categories: [...defaultCategories]
-        };
+        let data = { monthlyBudget: 50000, accounts: { UBI: 0, HDFC: 0, Axis: 0 }, transactions: [], categories: [...defaultCategories] };
         let fileHandle = null;
 
-        // Native File System API Handler
+        // ==========================================
+        // DATABASE HELPERS FOR SAVING FILE HANDLE
+        // ==========================================
+        function getDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('VaultProDB', 1);
+                request.onupgradeneeded = e => { e.target.result.createObjectStore('store'); };
+                request.onsuccess = e => resolve(e.target.result);
+                request.onerror = e => reject(e.target.error);
+            });
+        }
+        async function saveHandleToDB(handle) {
+            const db = await getDB();
+            const tx = db.transaction('store', 'readwrite');
+            tx.objectStore('store').put(handle, 'savedFileHandle');
+        }
+        async function loadHandleFromDB() {
+            const db = await getDB();
+            return new Promise((resolve) => {
+                const tx = db.transaction('store', 'readonly');
+                const req = tx.objectStore('store').get('savedFileHandle');
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => resolve(null);
+            });
+        }
+        async function verifyPermission(fileHandle) {
+            const opts = { mode: 'readwrite' };
+            if ((await fileHandle.queryPermission(opts)) === 'granted') return true;
+            if ((await fileHandle.requestPermission(opts)) === 'granted') return true;
+            return false;
+        }
+
+        // On Page Load: Check if we have a saved connection
+        window.addEventListener('DOMContentLoaded', async () => {
+            fileHandle = await loadHandleFromDB();
+            if (fileHandle) {
+                document.querySelectorAll('.file-status-text').forEach(el => el.innerText = "Reconnect File");
+                document.querySelectorAll('.file-connect-btn').forEach(btn => {
+                    btn.classList.add('animate-pulse');
+                });
+            }
+        });
+
+        // ==========================================
+        // FILE SYSTEM LOGIC
+        // ==========================================
         async function connectLocalFile() {
             try {
-                [fileHandle] = await window.showOpenFilePicker({
-                    types: [{
-                        description: 'JSON Files',
-                        accept: { 'application/json': ['.json'] },
-                    }],
-                });
-
-                const file = await fileHandle.getFile();
-                const contents = await file.text();
-                
-                if (contents && contents.trim().length > 0) {
-                    data = JSON.parse(contents);
-                    if (!data.categories) {
-                        data.categories = [...defaultCategories];
+                if (fileHandle) {
+                    const hasPermission = await verifyPermission(fileHandle);
+                    if (hasPermission) {
+                        await syncDataFromFile();
+                        return;
                     }
-                } else {
-                    await saveToFile(); // Write default structure if empty
                 }
                 
-                // Update styling for both mobile and desktop file buttons
-                document.querySelectorAll('.file-status-text').forEach(el => el.innerText = "Connected");
-                document.querySelectorAll('.file-connect-btn').forEach(btn => {
-                    btn.classList.remove('bg-yellow-500/10', 'border-yellow-500/20', 'text-yellow-400');
-                    btn.classList.add('bg-emerald-500/10', 'border-emerald-500/20', 'text-emerald-400');
+                [fileHandle] = await window.showOpenFilePicker({
+                    types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }],
                 });
                 
-                updateDashboard();
-                populateCategories(); 
-                if(document.getElementById('analytics').classList.contains('active')) renderAnalytics();
+                await saveHandleToDB(fileHandle);
+                await syncDataFromFile();
+
             } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error("File selection error:", error);
-                    alert("Unable to open the selected JSON file.");
-                }
+                if (error.name !== 'AbortError') console.error("File selection error:", error);
+            }
+        }
+
+        async function syncDataFromFile() {
+            const file = await fileHandle.getFile();
+            const contents = await file.text();
+            
+            if (contents && contents.trim().length > 0) {
+                data = JSON.parse(contents);
+                if (!data.categories) data.categories = [...defaultCategories];
+            } else {
+                await saveToFile(); 
+            }
+            
+            document.querySelectorAll('.file-status-text').forEach(el => el.innerText = "Connected");
+            document.querySelectorAll('.file-connect-btn').forEach(btn => {
+                btn.classList.remove('bg-yellow-500/10', 'border-yellow-500/20', 'text-yellow-400', 'animate-pulse');
+                btn.classList.add('bg-emerald-500/10', 'border-emerald-500/20', 'text-emerald-400');
+            });
+            
+            updateDashboard();
+            populateCategories(); 
+            
+            if(document.getElementById('transactions').classList.contains('active')) {
+                renderTransactionsTable();
+                renderAnalytics();
+            }
+            
+            if(document.getElementById('settings').classList.contains('active')) {
+                document.getElementById('update-bal-ubi').value = data.accounts.UBI || 0;
+                document.getElementById('update-bal-hdfc').value = data.accounts.HDFC || 0;
+                document.getElementById('update-bal-axis').value = data.accounts.Axis || 0;
+                calculateLiveTotal();
             }
         }
 
@@ -394,12 +457,12 @@
                 await writable.write(JSON.stringify(data, null, 2));
                 await writable.close();
             } catch (error) {
-                console.error("Direct write operation failed:", error);
-                alert("Failed to write directly to file. Check file permissions.");
+                console.error("Direct write failed:", error);
+                alert("Failed to write to file.");
             }
         }
 
-        // Load cached LocalStorage state if available
+        // Fallback Cache Loading
         const fallbackData = localStorage.getItem('financeData');
         if (fallbackData) {
             try { 
@@ -408,62 +471,88 @@
             } catch(e){}
         }
 
-        // Setup Categories UI
+        // ==========================================
+        // UI & NAVIGATION
+        // ==========================================
         function populateCategories() {
             const categorySelect = document.getElementById('category');
             categorySelect.innerHTML = '';
-            
             data.categories.sort().forEach(cat => {
-                const opt = document.createElement('option');
-                opt.value = cat;
-                opt.text = cat;
+                const opt = document.createElement('option'); opt.value = cat; opt.text = cat;
                 categorySelect.add(opt);
             });
 
             const masterList = document.getElementById('master-categories-list');
             masterList.innerHTML = '';
-            
             data.categories.forEach(cat => {
-                const pill = document.createElement('span');
-                pill.className = 'category-pill mb-2';
-                pill.innerText = cat;
+                const pill = document.createElement('span'); pill.className = 'category-pill mb-2'; pill.innerText = cat;
                 masterList.appendChild(pill);
             });
         }
 
-        // Navigation Sync (Desktop & Mobile)
         function switchTab(tabId) {
-            // Hide all sections
             document.querySelectorAll('.section-view').forEach(el => el.classList.remove('active'));
-            // Remove active state from all buttons
             document.querySelectorAll('.desktop-nav-btn, .mobile-nav-btn').forEach(el => el.classList.remove('active'));
-            
-            // Show selected section
             document.getElementById(tabId).classList.add('active');
-            
-            // Highlight selected buttons on both navigation bars
             document.querySelectorAll(`[data-tab="${tabId}"]`).forEach(btn => btn.classList.add('active'));
 
             if(tabId === 'dashboard') updateDashboard();
-            if(tabId === 'analytics') renderAnalytics();
+            if(tabId === 'transactions') {
+                renderTransactionsTable();
+                renderAnalytics();
+            }
             if(tabId === 'settings') {
                 document.getElementById('monthly-budget-input').value = data.monthlyBudget || 0;
-                // Pre-fill current balances when opening settings
                 document.getElementById('update-bal-ubi').value = data.accounts.UBI || 0;
                 document.getElementById('update-bal-hdfc').value = data.accounts.HDFC || 0;
                 document.getElementById('update-bal-axis').value = data.accounts.Axis || 0;
+                calculateLiveTotal();
             }
         }
 
-        // 1. Transaction Form Submission
+        function setTxnView(view) {
+            const btnTable = document.getElementById('btn-view-table');
+            const btnGraph = document.getElementById('btn-view-graph');
+            const viewTable = document.getElementById('view-table');
+            const viewGraph = document.getElementById('view-graph');
+
+            if (view === 'table') {
+                btnTable.className = 'px-4 py-2 rounded-lg text-sm font-semibold transition-all text-white bg-primary';
+                btnGraph.className = 'px-4 py-2 rounded-lg text-sm font-semibold transition-all text-gray-400 hover:text-white';
+                viewTable.classList.remove('hidden');
+                viewGraph.classList.add('hidden');
+                renderTransactionsTable();
+            } else {
+                btnGraph.className = 'px-4 py-2 rounded-lg text-sm font-semibold transition-all text-white bg-primary';
+                btnTable.className = 'px-4 py-2 rounded-lg text-sm font-semibold transition-all text-gray-400 hover:text-white';
+                viewGraph.classList.remove('hidden');
+                viewTable.classList.add('hidden');
+                renderAnalytics(); // Re-render canvas to fix scaling issues when unhidden
+            }
+        }
+
+        function calculateLiveTotal() {
+            const u = parseFloat(document.getElementById('update-bal-ubi').value) || 0;
+            const h = parseFloat(document.getElementById('update-bal-hdfc').value) || 0;
+            const a = parseFloat(document.getElementById('update-bal-axis').value) || 0;
+            document.getElementById('total-balance-settings').innerText = '₹' + (u + h + a).toLocaleString('en-IN');
+        }
+
+        ['update-bal-ubi', 'update-bal-hdfc', 'update-bal-axis'].forEach(id => {
+            document.getElementById(id).addEventListener('input', calculateLiveTotal);
+        });
+
+        // ==========================================
+        // FORM SUBMISSIONS
+        // ==========================================
         document.getElementById('transaction-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             if (!fileHandle) alert("Notice: No file connected. Saving to browser cache.");
-
+            
             const amountVal = parseFloat(document.getElementById('amount').value);
             const accountVal = document.getElementById('account').value;
             const typeVal = document.getElementById('type').value;
-
+            
             const trans = {
                 id: Date.now(),
                 type: typeVal,
@@ -473,117 +562,91 @@
                 date: document.getElementById('date').value
             };
 
-            if (trans.type === 'expense') {
-                data.accounts[accountVal] -= amountVal;
-            } else {
-                data.accounts[accountVal] += amountVal;
-            }
-
+            if (trans.type === 'expense') data.accounts[accountVal] -= amountVal;
+            else data.accounts[accountVal] += amountVal;
+            
             data.transactions.push(trans);
             await saveToFile();
             
             const btn = document.getElementById('save-btn');
-            const originalText = btn.innerHTML;
+            const orig = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Saved!';
-            btn.classList.replace('from-primary', 'from-emerald-500');
-            btn.classList.replace('to-secondary', 'to-emerald-600');
-            
+            btn.classList.replace('from-primary', 'from-emerald-500'); btn.classList.replace('to-secondary', 'to-emerald-600');
             setTimeout(() => {
-                btn.innerHTML = originalText;
-                btn.classList.replace('from-emerald-500', 'from-primary');
-                btn.classList.replace('to-emerald-600', 'to-secondary');
+                btn.innerHTML = orig;
+                btn.classList.replace('from-emerald-500', 'from-primary'); btn.classList.replace('to-emerald-600', 'to-secondary');
                 this.reset();
                 document.getElementById('date').value = new Date().toISOString().split('T')[0];
             }, 1500);
         });
 
-        // 2. Budget Form Submission
         document.getElementById('budget-form').addEventListener('submit', async function(e) {
             e.preventDefault();
-            const newBudget = parseFloat(document.getElementById('monthly-budget-input').value);
-            data.monthlyBudget = newBudget;
+            data.monthlyBudget = parseFloat(document.getElementById('monthly-budget-input').value);
             await saveToFile();
             updateDashboard();
-
+            
             const btn = document.getElementById('save-budget-btn');
-            const originalText = btn.innerHTML;
+            const orig = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-check"></i> Updated';
-            btn.classList.replace('from-blue-500', 'from-emerald-500');
-            btn.classList.replace('to-indigo-600', 'to-emerald-600');
+            btn.classList.replace('from-blue-500', 'from-emerald-500'); btn.classList.replace('to-indigo-600', 'to-emerald-600');
             setTimeout(() => {
-                btn.innerHTML = originalText;
-                btn.classList.replace('from-emerald-500', 'from-blue-500');
-                btn.classList.replace('to-emerald-600', 'to-indigo-600');
+                btn.innerHTML = orig;
+                btn.classList.replace('from-emerald-500', 'from-blue-500'); btn.classList.replace('to-emerald-600', 'to-indigo-600');
             }, 1500);
         });
 
-        // 3. Initial Balances Form Submission
         document.getElementById('balances-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             data.accounts.UBI = parseFloat(document.getElementById('update-bal-ubi').value) || 0;
             data.accounts.HDFC = parseFloat(document.getElementById('update-bal-hdfc').value) || 0;
             data.accounts.Axis = parseFloat(document.getElementById('update-bal-axis').value) || 0;
-            
             await saveToFile();
             updateDashboard();
-
-            const btn = document.getElementById('save-balances-btn');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-check"></i> Updated';
-            btn.classList.replace('from-emerald-500', 'from-blue-500');
-            btn.classList.replace('to-teal-600', 'to-indigo-600');
             
+            const btn = document.getElementById('save-balances-btn');
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Updated';
+            btn.classList.replace('from-emerald-500', 'from-blue-500'); btn.classList.replace('to-teal-600', 'to-indigo-600');
             setTimeout(() => {
-                btn.innerHTML = originalText;
-                btn.classList.replace('from-blue-500', 'from-emerald-500');
-                btn.classList.replace('to-indigo-600', 'to-teal-600');
+                btn.innerHTML = orig;
+                btn.classList.replace('from-blue-500', 'from-emerald-500'); btn.classList.replace('to-indigo-600', 'to-teal-600');
             }, 1500);
         });
 
-        // 4. Category Form Submission
         document.getElementById('category-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             const inputEl = document.getElementById('new-category-input');
             const newCat = inputEl.value.trim();
-            
             if(newCat && !data.categories.some(c => c.toLowerCase() === newCat.toLowerCase())) {
                 data.categories.push(newCat);
                 await saveToFile();
                 populateCategories(); 
                 inputEl.value = '';
-                
                 const btn = document.getElementById('save-category-btn');
-                const originalText = btn.innerHTML;
+                const orig = btn.innerHTML;
                 btn.innerHTML = '<i class="fa-solid fa-check"></i>';
-                btn.classList.replace('from-secondary', 'from-emerald-500');
-                btn.classList.replace('to-pink-600', 'to-emerald-600');
+                btn.classList.replace('from-secondary', 'from-emerald-500'); btn.classList.replace('to-pink-600', 'to-emerald-600');
                 setTimeout(() => {
-                    btn.innerHTML = originalText;
-                    btn.classList.replace('from-emerald-500', 'from-secondary');
-                    btn.classList.replace('to-emerald-600', 'to-pink-600');
+                    btn.innerHTML = orig;
+                    btn.classList.replace('from-emerald-500', 'from-secondary'); btn.classList.replace('to-emerald-600', 'to-pink-600');
                 }, 1500);
-            } else {
-                alert("Category already exists or is invalid.");
-            }
+            } else { alert("Category exists or is invalid."); }
         });
 
-        // Metrics Engine
+        // ==========================================
+        // RENDER ENGINES
+        // ==========================================
         function updateDashboard() {
             const today = new Date();
-            const yesterday = new Date(today);
-            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
             const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-            const yesterdaySpend = data.transactions
-                .filter(t => t.date === yesterdayStr && t.type === 'expense')
-                .reduce((sum, t) => sum + t.amount, 0);
-
             const currentMonthStr = today.toISOString().slice(0, 7);
-            const currentMonthSpend = data.transactions
-                .filter(t => t.date.startsWith(currentMonthStr) && t.type === 'expense')
-                .reduce((sum, t) => sum + t.amount, 0);
-            
+
+            const yesterdaySpend = data.transactions.filter(t => t.date === yesterdayStr && t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+            const currentMonthSpend = data.transactions.filter(t => t.date.startsWith(currentMonthStr) && t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
             const remainingBudget = (data.monthlyBudget || 0) - currentMonthSpend;
+            const totalBal = (data.accounts.UBI || 0) + (data.accounts.HDFC || 0) + (data.accounts.Axis || 0);
 
             document.getElementById('display-monthly-budget').innerText = '₹' + (data.monthlyBudget || 0).toLocaleString('en-IN');
             document.getElementById('yesterday-spend').innerText = '₹' + yesterdaySpend.toLocaleString('en-IN');
@@ -591,24 +654,59 @@
             document.getElementById('bal-ubi').innerText = '₹' + (data.accounts.UBI || 0).toLocaleString('en-IN');
             document.getElementById('bal-hdfc').innerText = '₹' + (data.accounts.HDFC || 0).toLocaleString('en-IN');
             document.getElementById('bal-axis').innerText = '₹' + (data.accounts.Axis || 0).toLocaleString('en-IN');
+            document.getElementById('total-balance-dash').innerText = '₹' + totalBal.toLocaleString('en-IN');
+            document.getElementById('total-balance-settings').innerText = '₹' + totalBal.toLocaleString('en-IN');
         }
 
-        // Radar Chart Analytics Engine
+        function renderTransactionsTable() {
+            const list = document.getElementById('transactions-list');
+            list.innerHTML = '';
+            
+            if (!data.transactions || data.transactions.length === 0) {
+                list.innerHTML = '<div class="text-center text-gray-400 py-10">No transactions recorded yet.</div>';
+                return;
+            }
+
+            // Sort transactions newest first
+            const sortedTxns = [...data.transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            sortedTxns.forEach(t => {
+                const isExp = t.type === 'expense';
+                const sign = isExp ? '-' : '+';
+                const color = isExp ? 'text-red-400' : 'text-emerald-400';
+                const icon = isExp ? 'fa-arrow-down' : 'fa-arrow-up';
+                const bg = isExp ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20';
+                const iconBg = isExp ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400';
+
+                const card = document.createElement('div');
+                card.className = `flex justify-between items-center p-3 md:p-4 rounded-xl border ${bg}`;
+                card.innerHTML = `
+                    <div class="flex items-center gap-3 md:gap-4">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center ${iconBg}">
+                            <i class="fa-solid ${icon}"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm md:text-base">${t.category}</p>
+                            <p class="text-[10px] md:text-xs text-gray-400">${t.date} • ${t.account}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-bold ${color}">${sign}₹${t.amount.toLocaleString('en-IN')}</p>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
         let chartInstance = null;
         function renderAnalytics() {
             const ctx = document.getElementById('expenseRadarChart').getContext('2d');
-            
             const categoryTotals = {};
-            data.transactions.filter(t => t.type === 'expense').forEach(t => {
-                categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
-            });
-
+            data.transactions.filter(t => t.type === 'expense').forEach(t => { categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount; });
             if (chartInstance) chartInstance.destroy();
-
-            Chart.defaults.color = '#94a3b8';
-            Chart.defaults.font.family = 'Outfit';
-
-            const labels = Object.keys(categoryTotals).length ? Object.keys(categoryTotals) : ['No Expenses Recorded'];
+            
+            Chart.defaults.color = '#94a3b8'; Chart.defaults.font.family = 'Outfit';
+            const labels = Object.keys(categoryTotals).length ? Object.keys(categoryTotals) : ['No Data'];
             const values = Object.keys(categoryTotals).length ? Object.values(categoryTotals) : [0];
 
             chartInstance = new Chart(ctx, {
@@ -616,36 +714,20 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Expense Spread (₹)',
-                        data: values,
-                        backgroundColor: 'rgba(236, 72, 153, 0.3)',
-                        borderColor: '#ec4899',
-                        pointBackgroundColor: '#6366f1',
-                        pointBorderColor: '#fff',
-                        borderWidth: 2
+                        label: 'Expense Spread (₹)', data: values,
+                        backgroundColor: 'rgba(236, 72, 153, 0.3)', borderColor: '#ec4899',
+                        pointBackgroundColor: '#6366f1', pointBorderColor: '#fff', borderWidth: 2
                     }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        r: {
-                            angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                            pointLabels: { color: '#f8fafc', font: { size: window.innerWidth < 768 ? 10 : 13 } },
-                            ticks: { display: false }
-                        }
-                    },
-                    plugins: {
-                        legend: { position: 'bottom', labels: { color: '#f8fafc' } }
-                    }
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { r: { angleLines: { color: 'rgba(255, 255, 255, 0.1)' }, grid: { color: 'rgba(255, 255, 255, 0.1)' }, pointLabels: { color: '#f8fafc', font: { size: window.innerWidth < 768 ? 10 : 13 } }, ticks: { display: false } } },
+                    plugins: { legend: { position: 'bottom', labels: { color: '#f8fafc' } } }
                 }
             });
         }
 
-        // Initial setup
-        populateCategories();
-        updateDashboard();
+        populateCategories(); updateDashboard();
         document.getElementById('date').value = new Date().toISOString().split('T')[0];
     </script>
 </body>
