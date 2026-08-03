@@ -128,7 +128,12 @@
                 </div>
             </header>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-8 md:mb-10">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-10">
+                <div class="glass p-5 md:p-6 rounded-2xl relative overflow-hidden">
+                    <div class="absolute right-0 top-0 w-24 h-24 bg-blue-500 opacity-10 rounded-bl-full"></div>
+                    <p class="text-xs md:text-sm text-gray-400 mb-1 md:mb-2">Today's Spend</p>
+                    <h3 class="text-3xl md:text-4xl font-bold text-white" id="today-spend">₹0</h3>
+                </div>
                 <div class="glass p-5 md:p-6 rounded-2xl relative overflow-hidden">
                     <div class="absolute right-0 top-0 w-24 h-24 bg-red-500 opacity-10 rounded-bl-full"></div>
                     <p class="text-xs md:text-sm text-gray-400 mb-1 md:mb-2">Yesterday's Spend</p>
@@ -527,7 +532,7 @@
                 btnTable.className = 'px-4 py-2 rounded-lg text-sm font-semibold transition-all text-gray-400 hover:text-white';
                 viewGraph.classList.remove('hidden');
                 viewTable.classList.add('hidden');
-                renderAnalytics(); // Re-render canvas to fix scaling issues when unhidden
+                renderAnalytics(); 
             }
         }
 
@@ -639,16 +644,19 @@
         // ==========================================
         function updateDashboard() {
             const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
             const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
             const yesterdayStr = yesterday.toISOString().split('T')[0];
             const currentMonthStr = today.toISOString().slice(0, 7);
 
+            const todaySpend = data.transactions.filter(t => t.date === todayStr && t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
             const yesterdaySpend = data.transactions.filter(t => t.date === yesterdayStr && t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
             const currentMonthSpend = data.transactions.filter(t => t.date.startsWith(currentMonthStr) && t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
             const remainingBudget = (data.monthlyBudget || 0) - currentMonthSpend;
             const totalBal = (data.accounts.UBI || 0) + (data.accounts.HDFC || 0) + (data.accounts.Axis || 0);
 
             document.getElementById('display-monthly-budget').innerText = '₹' + (data.monthlyBudget || 0).toLocaleString('en-IN');
+            document.getElementById('today-spend').innerText = '₹' + todaySpend.toLocaleString('en-IN');
             document.getElementById('yesterday-spend').innerText = '₹' + yesterdaySpend.toLocaleString('en-IN');
             document.getElementById('remaining-budget').innerText = '₹' + remainingBudget.toLocaleString('en-IN');
             document.getElementById('bal-ubi').innerText = '₹' + (data.accounts.UBI || 0).toLocaleString('en-IN');
