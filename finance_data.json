@@ -1,0 +1,21 @@
+{
+  "monthlyBudget": 30000,
+  "accounts": {
+    "UBI": 0,
+    "HDFC": 0,
+    "Axis": 0
+  },
+  "transactions": [],
+  "categories": [
+    "Dining Out",
+    "Entertainment",
+    "Groceries",
+    "Healthcare",
+    "Investments",
+    "Miscellaneous",
+    "Rent/Mortgage",
+    "Salary",
+    "Transportation",
+    "Utilities"
+  ]
+}

@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VaultPro - Personal Finance Manager</title>
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Outfit', 'sans-serif'] },
+                    colors: { primary: '#6366f1', secondary: '#ec4899', dark: '#0f172a' }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Glassmorphism & Visual Aesthetics */
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+        .section-view { display: none; animation: fadeIn 0.4s ease-in-out; }
+        .section-view.active { display: block; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Desktop Active Tab */
+        .desktop-nav-btn.active {
+            background: rgba(99, 102, 241, 0.2);
+            border-right: 4px solid #6366f1;
+            color: white;
+        }
+        
+        /* Mobile Active Tab */
+        .mobile-nav-btn.active {
+            color: #6366f1;
+            transform: scale(1.1);
+        }
+
+        .input-glass {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        .input-glass:focus { outline: none; border-color: #6366f1; background: rgba(255,255,255,0.1); }
+        .input-glass option { color: #0f172a; } /* Fix dropdown text color on mobile */
+        
+        .category-pill {
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: #c7d2fe;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+    </style>
+</head>
+<body class="flex flex-col md:flex-row h-screen overflow-hidden">
+
+    <!-- DESKTOP Sidebar Navigation -->
+    <aside class="hidden md:flex w-64 glass h-full flex-col p-6 z-10">
+        <div class="flex items-center gap-3 mb-10">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-xl font-bold shadow-lg">
+                <i class="fa-solid fa-wallet text-white"></i>
+            </div>
+            <h1 class="text-xl font-bold tracking-wider">Vault<span class="text-primary">Pro</span></h1>
+        </div>
+
+        <nav class="flex flex-col gap-2 flex-1">
+            <button onclick="switchTab('dashboard')" data-tab="dashboard" class="desktop-nav-btn active flex items-center gap-4 px-4 py-3 rounded-lg text-gray-400 hover:text-white transition-all text-left">
+                <i class="fa-solid fa-chart-pie w-5"></i> Dashboard
+            </button>
+            <button onclick="switchTab('insert')" data-tab="insert" class="desktop-nav-btn flex items-center gap-4 px-4 py-3 rounded-lg text-gray-400 hover:text-white transition-all text-left">
+                <i class="fa-solid fa-plus w-5"></i> Add Record
+            </button>
+            <button onclick="switchTab('analytics')" data-tab="analytics" class="desktop-nav-btn flex items-center gap-4 px-4 py-3 rounded-lg text-gray-400 hover:text-white transition-all text-left">
+                <i class="fa-solid fa-chart-radar w-5"></i> Analytics
+            </button>
+            <button onclick="switchTab('settings')" data-tab="settings" class="desktop-nav-btn flex items-center gap-4 px-4 py-3 rounded-lg text-gray-400 hover:text-white transition-all text-left">
+                <i class="fa-solid fa-gear w-5"></i> Settings
+            </button>
+        </nav>
+
+        <div class="pt-4 border-t border-gray-700/50">
+            <button onclick="connectLocalFile()" class="file-connect-btn w-full flex items-center justify-between px-4 py-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 hover:bg-yellow-500/20 transition-all text-left text-sm font-semibold">
+                <span class="flex items-center gap-2"><i class="fa-solid fa-folder-open"></i> <span class="file-status-text">Connect File</span></span>
+                <i class="fa-solid fa-plug text-xs opacity-70"></i>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 p-4 pb-24 md:p-8 md:pb-8 overflow-y-auto relative w-full">
+        <!-- Ambient Glowing Background Spheres -->
+        <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-primary rounded-full mix-blend-multiply filter blur-[128px] opacity-20 -z-10 pointer-events-none"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-secondary rounded-full mix-blend-multiply filter blur-[128px] opacity-20 -z-10 pointer-events-none"></div>
+
+        <!-- MOBILE Header -->
+        <div class="md:hidden flex justify-between items-center mb-6 px-2">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-sm font-bold shadow-lg">
+                    <i class="fa-solid fa-wallet text-white"></i>
+                </div>
+                <h1 class="text-lg font-bold tracking-wider">Vault<span class="text-primary">Pro</span></h1>
+            </div>
+            <button onclick="connectLocalFile()" class="file-connect-btn px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs font-semibold flex items-center gap-2">
+                <i class="fa-solid fa-folder-open"></i> <span class="file-status-text">File</span>
+            </button>
+        </div>
+
+        <!-- DASHBOARD TAB -->
+        <div id="dashboard" class="section-view active">
+            <header class="flex flex-col md:flex-row md:justify-between items-start md:items-center gap-4 mb-8 md:mb-10">
+                <div>
+                    <h2 class="text-2xl md:text-3xl font-bold">Overview</h2>
+                    <p class="text-gray-400 text-sm mt-1">Daily expenditure and budget tracking</p>
+                </div>
+                <div class="glass px-5 py-2 md:px-6 md:py-3 rounded-full flex items-center gap-3">
+                    <span class="text-xs md:text-sm text-gray-400">Monthly Budget</span>
+                    <span class="font-bold text-primary" id="display-monthly-budget">₹0</span>
+                </div>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-8 md:mb-10">
+                <div class="glass p-5 md:p-6 rounded-2xl relative overflow-hidden">
+                    <div class="absolute right-0 top-0 w-24 h-24 bg-red-500 opacity-10 rounded-bl-full"></div>
+                    <p class="text-xs md:text-sm text-gray-400 mb-1 md:mb-2">Yesterday's Spend</p>
+                    <h3 class="text-3xl md:text-4xl font-bold text-white" id="yesterday-spend">₹0</h3>
+                </div>
+                <div class="glass p-5 md:p-6 rounded-2xl relative overflow-hidden">
+                    <div class="absolute right-0 top-0 w-24 h-24 bg-emerald-500 opacity-10 rounded-bl-full"></div>
+                    <p class="text-xs md:text-sm text-gray-400 mb-1 md:mb-2">Remaining Budget</p>
+                    <h3 class="text-3xl md:text-4xl font-bold text-white" id="remaining-budget">₹0</h3>
+                </div>
+            </div>
+
+            <h3 class="text-lg md:text-xl font-semibold mb-4 md:mb-6">Account Balances</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                <div class="glass p-5 rounded-2xl border-l-4 md:border-l-0 md:border-t-4 border-blue-500 flex justify-between items-center">
+                    <div>
+                        <p class="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider mb-1">Union Bank of India</p>
+                        <h4 class="text-xl md:text-2xl font-bold" id="bal-ubi">₹0</h4>
+                    </div>
+                    <i class="fa-solid fa-building-columns text-2xl md:text-3xl text-blue-500/20"></i>
+                </div>
+                <div class="glass p-5 rounded-2xl border-l-4 md:border-l-0 md:border-t-4 border-red-500 flex justify-between items-center">
+                    <div>
+                        <p class="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider mb-1">HDFC Bank</p>
+                        <h4 class="text-xl md:text-2xl font-bold" id="bal-hdfc">₹0</h4>
+                    </div>
+                    <i class="fa-solid fa-building-columns text-2xl md:text-3xl text-red-500/20"></i>
+                </div>
+                <div class="glass p-5 rounded-2xl border-l-4 md:border-l-0 md:border-t-4 border-pink-500 flex justify-between items-center">
+                    <div>
+                        <p class="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider mb-1">Axis Bank</p>
+                        <h4 class="text-xl md:text-2xl font-bold" id="bal-axis">₹0</h4>
+                    </div>
+                    <i class="fa-solid fa-building-columns text-2xl md:text-3xl text-pink-500/20"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- DATA INSERTION TAB -->
+        <div id="insert" class="section-view">
+            <h2 class="text-2xl md:text-3xl font-bold mb-6 md:mb-8">Add New Record</h2>
+            <div class="glass p-5 md:p-8 rounded-2xl max-w-2xl">
+                <form id="transaction-form" class="space-y-4 md:space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                        <div>
+                            <label class="block text-xs md:text-sm text-gray-400 mb-2">Transaction Type</label>
+                            <select id="type" class="w-full input-glass rounded-lg px-4 py-3 appearance-none">
+                                <option value="expense">Expense</option>
+                                <option value="income">Income</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs md:text-sm text-gray-400 mb-2">Date</label>
+                            <input type="date" id="date" class="w-full input-glass rounded-lg px-4 py-3 text-white" required>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                        <div>
+                            <label class="block text-xs md:text-sm text-gray-400 mb-2">Amount (₹)</label>
+                            <div class="relative">
+                                <span class="absolute left-4 top-3 text-gray-400">₹</span>
+                                <input type="number" step="0.01" id="amount" class="w-full input-glass rounded-lg pl-8 pr-4 py-3" placeholder="0.00" required>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs md:text-sm text-gray-400 mb-2">Account</label>
+                            <select id="account" class="w-full input-glass rounded-lg px-4 py-3 appearance-none">
+                                <option value="UBI">Union Bank of India</option>
+                                <option value="HDFC">HDFC</option>
+                                <option value="Axis">Axis</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs md:text-sm text-gray-400 mb-2">Category</label>
+                        <select id="category" class="w-full input-glass rounded-lg px-4 py-3 appearance-none" required>
+                            <!-- Dynamically loaded from master data -->
+                        </select>
+                    </div>
+
+                    <button type="submit" id="save-btn" class="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white font-bold py-4 rounded-xl shadow-lg mt-4 transition-all active:scale-95">
+                        <i class="fa-solid fa-floppy-disk mr-2"></i> Save Record
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ANALYTICS TAB -->
+        <div id="analytics" class="section-view">
+            <h2 class="text-2xl md:text-3xl font-bold mb-6 md:mb-8">Category Analytics</h2>
+            <div class="glass p-4 md:p-8 rounded-2xl max-w-4xl mx-auto flex justify-center">
+                <div class="w-full max-w-xl aspect-square md:aspect-auto">
+                    <canvas id="expenseRadarChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- SETTINGS TAB -->
+        <div id="settings" class="section-view">
+            <h2 class="text-2xl md:text-3xl font-bold mb-6 md:mb-8">Settings</h2>
+            <div class="glass p-5 md:p-8 rounded-2xl max-w-2xl">
+                
+                <!-- Account Balances Setup -->
+                <h3 class="text-lg md:text-xl font-semibold mb-4 text-white">Initial Account Balances</h3>
+                <form id="balances-form" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs md:text-sm text-gray-400 mb-2">UBI (₹)</label>
+                            <input type="number" step="0.01" id="update-bal-ubi" class="w-full input-glass rounded-lg px-4 py-3" placeholder="0.00" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs md:text-sm text-gray-400 mb-2">HDFC (₹)</label>
+                            <input type="number" step="0.01" id="update-bal-hdfc" class="w-full input-glass rounded-lg px-4 py-3" placeholder="0.00" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs md:text-sm text-gray-400 mb-2">Axis (₹)</label>
+                            <input type="number" step="0.01" id="update-bal-axis" class="w-full input-glass rounded-lg px-4 py-3" placeholder="0.00" required>
+                        </div>
+                    </div>
+                    <button type="submit" id="save-balances-btn" class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform">
+                        Update Balances
+                    </button>
+                </form>
+
+                <!-- Budget Settings -->
+                <h3 class="text-lg md:text-xl font-semibold mb-4 text-white mt-8 border-t border-gray-700/50 pt-6 md:pt-8">Financial Goals</h3>
+                <form id="budget-form" class="space-y-4">
+                    <div>
+                        <label class="block text-xs md:text-sm text-gray-400 mb-2">Target Monthly Budget (₹)</label>
+                        <div class="flex flex-col md:flex-row gap-3">
+                            <div class="relative flex-1">
+                                <span class="absolute left-4 top-3 text-gray-400">₹</span>
+                                <input type="number" step="0.01" id="monthly-budget-input" class="w-full input-glass rounded-lg pl-8 pr-4 py-3" placeholder="50000" required>
+                            </div>
+                            <button type="submit" id="save-budget-btn" class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform">
+                                Update Budget
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Category Settings -->
+                <div class="mt-8 border-t border-gray-700/50 pt-6 md:pt-8">
+                    <h3 class="text-lg md:text-xl font-semibold mb-4 text-white">Master Categories</h3>
+                    <form id="category-form" class="space-y-4 mb-6">
+                        <div>
+                            <label class="block text-xs md:text-sm text-gray-400 mb-2">Add New Category</label>
+                            <div class="flex flex-col md:flex-row gap-3">
+                                <input type="text" id="new-category-input" class="flex-1 input-glass rounded-lg px-4 py-3" placeholder="e.g., Pet Care" required>
+                                <button type="submit" id="save-category-btn" class="bg-gradient-to-r from-secondary to-pink-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform">
+                                    <i class="fa-solid fa-plus md:mr-1"></i> <span class="md:hidden">Add</span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <label class="block text-xs md:text-sm text-gray-400 mb-2">Current Master List</label>
+                    <div id="master-categories-list" class="flex flex-wrap gap-2">
+                        <!-- Category pills dynamically loaded here -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- MOBILE Bottom Navigation Bar (Hidden on Desktop) -->
+    <nav class="md:hidden fixed bottom-0 left-0 w-full glass flex justify-around items-center p-2 z-50 rounded-t-3xl border-t border-white/5 pb-6">
+        <button onclick="switchTab('dashboard')" data-tab="dashboard" class="mobile-nav-btn active flex flex-col items-center gap-1 text-gray-400 p-2 w-16 transition-all duration-300 ease-out">
+            <i class="fa-solid fa-chart-pie text-xl"></i>
+            <span class="text-[10px] font-medium tracking-wide mt-1">Dash</span>
+        </button>
+        <button onclick="switchTab('insert')" data-tab="insert" class="mobile-nav-btn flex flex-col items-center gap-1 text-gray-400 p-2 w-16 transition-all duration-300 ease-out">
+            <i class="fa-solid fa-plus text-xl"></i>
+            <span class="text-[10px] font-medium tracking-wide mt-1">Add</span>
+        </button>
+        <button onclick="switchTab('analytics')" data-tab="analytics" class="mobile-nav-btn flex flex-col items-center gap-1 text-gray-400 p-2 w-16 transition-all duration-300 ease-out">
+            <i class="fa-solid fa-chart-radar text-xl"></i>
+            <span class="text-[10px] font-medium tracking-wide mt-1">Graph</span>
+        </button>
+        <button onclick="switchTab('settings')" data-tab="settings" class="mobile-nav-btn flex flex-col items-center gap-1 text-gray-400 p-2 w-16 transition-all duration-300 ease-out">
+            <i class="fa-solid fa-gear text-xl"></i>
+            <span class="text-[10px] font-medium tracking-wide mt-1">Setup</span>
+        </button>
+    </nav>
+
+    <script>
+        // Data Structure with default categories fallback
+        const defaultCategories = ["Groceries", "Rent/Mortgage", "Utilities", "Transportation", "Dining Out", "Entertainment", "Healthcare", "Salary", "Investments", "Miscellaneous"];
+        
+        let data = {
+            monthlyBudget: 50000,
+            accounts: { UBI: 0, HDFC: 0, Axis: 0 },
+            transactions: [],
+            categories: [...defaultCategories]
+        };
+        let fileHandle = null;
+
+        // Native File System API Handler
+        async function connectLocalFile() {
+            try {
+                [fileHandle] = await window.showOpenFilePicker({
+                    types: [{
+                        description: 'JSON Files',
+                        accept: { 'application/json': ['.json'] },
+                    }],
+                });
+
+                const file = await fileHandle.getFile();
+                const contents = await file.text();
+                
+                if (contents && contents.trim().length > 0) {
+                    data = JSON.parse(contents);
+                    if (!data.categories) {
+                        data.categories = [...defaultCategories];
+                    }
+                } else {
+                    await saveToFile(); // Write default structure if empty
+                }
+                
+                // Update styling for both mobile and desktop file buttons
+                document.querySelectorAll('.file-status-text').forEach(el => el.innerText = "Connected");
+                document.querySelectorAll('.file-connect-btn').forEach(btn => {
+                    btn.classList.remove('bg-yellow-500/10', 'border-yellow-500/20', 'text-yellow-400');
+                    btn.classList.add('bg-emerald-500/10', 'border-emerald-500/20', 'text-emerald-400');
+                });
+                
+                updateDashboard();
+                populateCategories(); 
+                if(document.getElementById('analytics').classList.contains('active')) renderAnalytics();
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error("File selection error:", error);
+                    alert("Unable to open the selected JSON file.");
+                }
+            }
+        }
+
+        async function saveToFile() {
+            if (!fileHandle) {
+                localStorage.setItem('financeData', JSON.stringify(data));
+                return;
+            }
+            try {
+                const writable = await fileHandle.createWritable();
+                await writable.write(JSON.stringify(data, null, 2));
+                await writable.close();
+            } catch (error) {
+                console.error("Direct write operation failed:", error);
+                alert("Failed to write directly to file. Check file permissions.");
+            }
+        }
+
+        // Load cached LocalStorage state if available
+        const fallbackData = localStorage.getItem('financeData');
+        if (fallbackData) {
+            try { 
+                data = JSON.parse(fallbackData); 
+                if (!data.categories) data.categories = [...defaultCategories];
+            } catch(e){}
+        }
+
+        // Setup Categories UI
+        function populateCategories() {
+            const categorySelect = document.getElementById('category');
+            categorySelect.innerHTML = '';
+            
+            data.categories.sort().forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.text = cat;
+                categorySelect.add(opt);
+            });
+
+            const masterList = document.getElementById('master-categories-list');
+            masterList.innerHTML = '';
+            
+            data.categories.forEach(cat => {
+                const pill = document.createElement('span');
+                pill.className = 'category-pill mb-2';
+                pill.innerText = cat;
+                masterList.appendChild(pill);
+            });
+        }
+
+        // Navigation Sync (Desktop & Mobile)
+        function switchTab(tabId) {
+            // Hide all sections
+            document.querySelectorAll('.section-view').forEach(el => el.classList.remove('active'));
+            // Remove active state from all buttons
+            document.querySelectorAll('.desktop-nav-btn, .mobile-nav-btn').forEach(el => el.classList.remove('active'));
+            
+            // Show selected section
+            document.getElementById(tabId).classList.add('active');
+            
+            // Highlight selected buttons on both navigation bars
+            document.querySelectorAll(`[data-tab="${tabId}"]`).forEach(btn => btn.classList.add('active'));
+
+            if(tabId === 'dashboard') updateDashboard();
+            if(tabId === 'analytics') renderAnalytics();
+            if(tabId === 'settings') {
+                document.getElementById('monthly-budget-input').value = data.monthlyBudget || 0;
+                // Pre-fill current balances when opening settings
+                document.getElementById('update-bal-ubi').value = data.accounts.UBI || 0;
+                document.getElementById('update-bal-hdfc').value = data.accounts.HDFC || 0;
+                document.getElementById('update-bal-axis').value = data.accounts.Axis || 0;
+            }
+        }
+
+        // 1. Transaction Form Submission
+        document.getElementById('transaction-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if (!fileHandle) alert("Notice: No file connected. Saving to browser cache.");
+
+            const amountVal = parseFloat(document.getElementById('amount').value);
+            const accountVal = document.getElementById('account').value;
+            const typeVal = document.getElementById('type').value;
+
+            const trans = {
+                id: Date.now(),
+                type: typeVal,
+                amount: amountVal,
+                account: accountVal,
+                category: document.getElementById('category').value,
+                date: document.getElementById('date').value
+            };
+
+            if (trans.type === 'expense') {
+                data.accounts[accountVal] -= amountVal;
+            } else {
+                data.accounts[accountVal] += amountVal;
+            }
+
+            data.transactions.push(trans);
+            await saveToFile();
+            
+            const btn = document.getElementById('save-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Saved!';
+            btn.classList.replace('from-primary', 'from-emerald-500');
+            btn.classList.replace('to-secondary', 'to-emerald-600');
+            
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.classList.replace('from-emerald-500', 'from-primary');
+                btn.classList.replace('to-emerald-600', 'to-secondary');
+                this.reset();
+                document.getElementById('date').value = new Date().toISOString().split('T')[0];
+            }, 1500);
+        });
+
+        // 2. Budget Form Submission
+        document.getElementById('budget-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const newBudget = parseFloat(document.getElementById('monthly-budget-input').value);
+            data.monthlyBudget = newBudget;
+            await saveToFile();
+            updateDashboard();
+
+            const btn = document.getElementById('save-budget-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Updated';
+            btn.classList.replace('from-blue-500', 'from-emerald-500');
+            btn.classList.replace('to-indigo-600', 'to-emerald-600');
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.classList.replace('from-emerald-500', 'from-blue-500');
+                btn.classList.replace('to-emerald-600', 'to-indigo-600');
+            }, 1500);
+        });
+
+        // 3. Initial Balances Form Submission
+        document.getElementById('balances-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            data.accounts.UBI = parseFloat(document.getElementById('update-bal-ubi').value) || 0;
+            data.accounts.HDFC = parseFloat(document.getElementById('update-bal-hdfc').value) || 0;
+            data.accounts.Axis = parseFloat(document.getElementById('update-bal-axis').value) || 0;
+            
+            await saveToFile();
+            updateDashboard();
+
+            const btn = document.getElementById('save-balances-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Updated';
+            btn.classList.replace('from-emerald-500', 'from-blue-500');
+            btn.classList.replace('to-teal-600', 'to-indigo-600');
+            
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.classList.replace('from-blue-500', 'from-emerald-500');
+                btn.classList.replace('to-indigo-600', 'to-teal-600');
+            }, 1500);
+        });
+
+        // 4. Category Form Submission
+        document.getElementById('category-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const inputEl = document.getElementById('new-category-input');
+            const newCat = inputEl.value.trim();
+            
+            if(newCat && !data.categories.some(c => c.toLowerCase() === newCat.toLowerCase())) {
+                data.categories.push(newCat);
+                await saveToFile();
+                populateCategories(); 
+                inputEl.value = '';
+                
+                const btn = document.getElementById('save-category-btn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+                btn.classList.replace('from-secondary', 'from-emerald-500');
+                btn.classList.replace('to-pink-600', 'to-emerald-600');
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.classList.replace('from-emerald-500', 'from-secondary');
+                    btn.classList.replace('to-emerald-600', 'to-pink-600');
+                }, 1500);
+            } else {
+                alert("Category already exists or is invalid.");
+            }
+        });
+
+        // Metrics Engine
+        function updateDashboard() {
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+            const yesterdaySpend = data.transactions
+                .filter(t => t.date === yesterdayStr && t.type === 'expense')
+                .reduce((sum, t) => sum + t.amount, 0);
+
+            const currentMonthStr = today.toISOString().slice(0, 7);
+            const currentMonthSpend = data.transactions
+                .filter(t => t.date.startsWith(currentMonthStr) && t.type === 'expense')
+                .reduce((sum, t) => sum + t.amount, 0);
+            
+            const remainingBudget = (data.monthlyBudget || 0) - currentMonthSpend;
+
+            document.getElementById('display-monthly-budget').innerText = '₹' + (data.monthlyBudget || 0).toLocaleString('en-IN');
+            document.getElementById('yesterday-spend').innerText = '₹' + yesterdaySpend.toLocaleString('en-IN');
+            document.getElementById('remaining-budget').innerText = '₹' + remainingBudget.toLocaleString('en-IN');
+            document.getElementById('bal-ubi').innerText = '₹' + (data.accounts.UBI || 0).toLocaleString('en-IN');
+            document.getElementById('bal-hdfc').innerText = '₹' + (data.accounts.HDFC || 0).toLocaleString('en-IN');
+            document.getElementById('bal-axis').innerText = '₹' + (data.accounts.Axis || 0).toLocaleString('en-IN');
+        }
+
+        // Radar Chart Analytics Engine
+        let chartInstance = null;
+        function renderAnalytics() {
+            const ctx = document.getElementById('expenseRadarChart').getContext('2d');
+            
+            const categoryTotals = {};
+            data.transactions.filter(t => t.type === 'expense').forEach(t => {
+                categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
+            });
+
+            if (chartInstance) chartInstance.destroy();
+
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.font.family = 'Outfit';
+
+            const labels = Object.keys(categoryTotals).length ? Object.keys(categoryTotals) : ['No Expenses Recorded'];
+            const values = Object.keys(categoryTotals).length ? Object.values(categoryTotals) : [0];
+
+            chartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Expense Spread (₹)',
+                        data: values,
+                        backgroundColor: 'rgba(236, 72, 153, 0.3)',
+                        borderColor: '#ec4899',
+                        pointBackgroundColor: '#6366f1',
+                        pointBorderColor: '#fff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            pointLabels: { color: '#f8fafc', font: { size: window.innerWidth < 768 ? 10 : 13 } },
+                            ticks: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#f8fafc' } }
+                    }
+                }
+            });
+        }
+
+        // Initial setup
+        populateCategories();
+        updateDashboard();
+        document.getElementById('date').value = new Date().toISOString().split('T')[0];
+    </script>
+</body>
+</html>
