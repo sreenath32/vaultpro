@@ -181,7 +181,7 @@
 
         <!-- DATA INSERTION TAB -->
         <div id="insert" class="section-view">
-            <h2 class="text-2xl md:text-3xl font-bold mb-6 md:mb-8">Add New Record</h2>
+            <h2 class="text-2xl md:text-3xl font-bold mb-6 md:mb-8" id="insert-title">Add New Record</h2>
             <div class="glass p-5 md:p-8 rounded-2xl max-w-2xl">
                 <form id="transaction-form" class="space-y-4 md:space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -354,6 +354,7 @@
         
         let data = { monthlyBudget: 50000, accounts: { UBI: 0, HDFC: 0, Axis: 0 }, transactions: [], categories: [...defaultCategories] };
         let fileHandle = null;
+        let editingTransactionId = null; // Track if we are editing an existing record
 
         // ==========================================
         // DATABASE HELPERS FOR SAVING FILE HANDLE
@@ -387,7 +388,7 @@
             return false;
         }
 
-        // On Page Load: Check if we have a saved connection
+        // On Page Load
         window.addEventListener('DOMContentLoaded', async () => {
             fileHandle = await loadHandleFromDB();
             if (fileHandle) {
@@ -471,7 +472,6 @@
             }
         }
 
-        // Fallback Cache Loading
         const fallbackData = localStorage.getItem('financeData');
         if (fallbackData) {
             try { 
@@ -504,6 +504,15 @@
             document.querySelectorAll('.desktop-nav-btn, .mobile-nav-btn').forEach(el => el.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             document.querySelectorAll(`[data-tab="${tabId}"]`).forEach(btn => btn.classList.add('active'));
+
+            // Cancel Edit mode safely if navigating away from the insert tab
+            if(tabId !== 'insert' && editingTransactionId) {
+                editingTransactionId = null;
+                document.getElementById('transaction-form').reset();
+                document.getElementById('date').value = new Date().toISOString().split('T')[0];
+                document.getElementById('save-btn').innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i> Save Record';
+                document.getElementById('insert-title').innerText = 'Add New Record';
+            }
 
             if(tabId === 'dashboard') updateDashboard();
             if(tabId === 'transactions') {
@@ -552,6 +561,49 @@
         });
 
         // ==========================================
+        // EDIT AND DELETE TRANSACTIONS
+        // ==========================================
+        async function deleteTransaction(id) {
+            if (!confirm("Are you sure you want to delete this transaction? This will automatically update your account balances.")) return;
+            
+            const index = data.transactions.findIndex(t => t.id === id);
+            if (index > -1) {
+                const t = data.transactions[index];
+                
+                // Reverse the balance impact
+                if (t.type === 'expense') data.accounts[t.account] += t.amount;
+                else data.accounts[t.account] -= t.amount;
+                
+                // Remove from array and save
+                data.transactions.splice(index, 1);
+                await saveToFile();
+                
+                // Refresh UI
+                renderTransactionsTable();
+                updateDashboard();
+            }
+        }
+
+        function editTransaction(id) {
+            const t = data.transactions.find(t => t.id === id);
+            if (t) {
+                editingTransactionId = id;
+                document.getElementById('type').value = t.type;
+                document.getElementById('date').value = t.date;
+                document.getElementById('amount').value = t.amount;
+                document.getElementById('account').value = t.account;
+                document.getElementById('category').value = t.category;
+                
+                // Update UI hints for editing mode
+                document.getElementById('insert-title').innerText = 'Edit Record';
+                const btn = document.getElementById('save-btn');
+                btn.innerHTML = '<i class="fa-solid fa-pen mr-2"></i> Update Record';
+                
+                switchTab('insert');
+            }
+        }
+
+        // ==========================================
         // FORM SUBMISSIONS
         // ==========================================
         document.getElementById('transaction-form').addEventListener('submit', async function(e) {
@@ -561,9 +613,21 @@
             const amountVal = parseFloat(document.getElementById('amount').value);
             const accountVal = document.getElementById('account').value;
             const typeVal = document.getElementById('type').value;
+
+            // If we are editing, first reverse the OLD transaction's impact
+            if (editingTransactionId) {
+                const oldIndex = data.transactions.findIndex(t => t.id === editingTransactionId);
+                if (oldIndex > -1) {
+                    const oldT = data.transactions[oldIndex];
+                    if (oldT.type === 'expense') data.accounts[oldT.account] += oldT.amount;
+                    else data.accounts[oldT.account] -= oldT.amount;
+                    
+                    data.transactions.splice(oldIndex, 1); // Remove old record
+                }
+            }
             
             const trans = {
-                id: Date.now(),
+                id: editingTransactionId ? editingTransactionId : Date.now(),
                 type: typeVal,
                 amount: amountVal,
                 account: accountVal,
@@ -571,18 +635,23 @@
                 date: document.getElementById('date').value
             };
 
+            // Apply NEW transaction impact
             if (trans.type === 'expense') data.accounts[accountVal] -= amountVal;
             else data.accounts[accountVal] += amountVal;
             
             data.transactions.push(trans);
             await saveToFile();
             
+            // Reset Edit State
+            editingTransactionId = null;
+            document.getElementById('insert-title').innerText = 'Add New Record';
+
             const btn = document.getElementById('save-btn');
-            const orig = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Saved!';
             btn.classList.replace('from-primary', 'from-emerald-500'); btn.classList.replace('to-secondary', 'to-emerald-600');
+            
             setTimeout(() => {
-                btn.innerHTML = orig;
+                btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i> Save Record';
                 btn.classList.replace('from-emerald-500', 'from-primary'); btn.classList.replace('to-emerald-600', 'to-secondary');
                 this.reset();
                 document.getElementById('date').value = new Date().toISOString().split('T')[0];
@@ -702,8 +771,12 @@
                             <p class="text-[10px] md:text-xs text-gray-400">${t.date} • ${t.account}</p>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <p class="font-bold ${color}">${sign}₹${t.amount.toLocaleString('en-IN')}</p>
+                    <div class="flex flex-col items-end gap-1 md:gap-2">
+                        <p class="font-bold ${color} text-sm md:text-base">${sign}₹${t.amount.toLocaleString('en-IN')}</p>
+                        <div class="flex gap-3">
+                            <button onclick="editTransaction(${t.id})" class="text-gray-400 hover:text-blue-400 transition-colors"><i class="fa-solid fa-pen text-xs md:text-sm"></i></button>
+                            <button onclick="deleteTransaction(${t.id})" class="text-gray-400 hover:text-red-400 transition-colors"><i class="fa-solid fa-trash text-xs md:text-sm"></i></button>
+                        </div>
                     </div>
                 `;
                 list.appendChild(card);
