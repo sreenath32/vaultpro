@@ -49,7 +49,7 @@
         .input-glass:focus { outline: none; border-color: #6366f1; background: rgba(255,255,255,0.1); }
         .input-glass option { color: #0f172a; }
         
-        .category-pill {
+        .badge-pill {
             background: rgba(99, 102, 241, 0.15);
             border: 1px solid rgba(99, 102, 241, 0.3);
             color: #c7d2fe;
@@ -216,10 +216,17 @@
                         </div>
                     </div>
 
-                    <div>
-                        <label class="block text-xs md:text-sm text-gray-400 mb-2">Category</label>
-                        <select id="category" class="w-full input-glass rounded-lg px-4 py-3 appearance-none" required>
-                        </select>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                        <div>
+                            <label class="block text-xs md:text-sm text-gray-400 mb-2">Category</label>
+                            <select id="category" class="w-full input-glass rounded-lg px-4 py-3 appearance-none" required>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs md:text-sm text-gray-400 mb-2">Payment Method</label>
+                            <select id="payment-method" class="w-full input-glass rounded-lg px-4 py-3 appearance-none" required>
+                            </select>
+                        </div>
                     </div>
 
                     <button type="submit" id="save-btn" class="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white font-bold py-4 rounded-xl shadow-lg mt-4 transition-all active:scale-95">
@@ -321,6 +328,24 @@
                     <label class="block text-xs md:text-sm text-gray-400 mb-2">Current Master List</label>
                     <div id="master-categories-list" class="flex flex-wrap gap-2"></div>
                 </div>
+
+                <div class="mt-8 border-t border-gray-700/50 pt-6 md:pt-8">
+                    <h3 class="text-lg md:text-xl font-semibold mb-4 text-white">Master Payment Methods</h3>
+                    <form id="payment-method-form" class="space-y-4 mb-6">
+                        <div>
+                            <label class="block text-xs md:text-sm text-gray-400 mb-2">Add New Payment Method</label>
+                            <div class="flex flex-col md:flex-row gap-3">
+                                <input type="text" id="new-payment-method-input" class="flex-1 input-glass rounded-lg px-4 py-3" placeholder="e.g., Google Pay" required>
+                                <button type="submit" id="save-payment-method-btn" class="bg-gradient-to-r from-secondary to-pink-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform">
+                                    <i class="fa-solid fa-plus md:mr-1"></i> <span class="md:hidden">Add</span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    <label class="block text-xs md:text-sm text-gray-400 mb-2">Current Master List</label>
+                    <div id="master-payment-methods-list" class="flex flex-wrap gap-2"></div>
+                </div>
+
             </div>
         </div>
 
@@ -351,10 +376,18 @@
 
     <script>
         const defaultCategories = ["Groceries", "Rent/Mortgage", "Utilities", "Transportation", "Dining Out", "Entertainment", "Healthcare", "Salary", "Investments", "Miscellaneous"];
+        const defaultPaymentMethods = ["UPI", "Credit Card", "Debit Card", "Cash", "Net Banking"];
         
-        let data = { monthlyBudget: 50000, accounts: { UBI: 0, HDFC: 0, Axis: 0 }, transactions: [], categories: [...defaultCategories] };
+        let data = { 
+            monthlyBudget: 50000, 
+            accounts: { UBI: 0, HDFC: 0, Axis: 0 }, 
+            transactions: [], 
+            categories: [...defaultCategories],
+            paymentMethods: [...defaultPaymentMethods]
+        };
+        
         let fileHandle = null;
-        let editingTransactionId = null; // Track if we are editing an existing record
+        let editingTransactionId = null; 
 
         // ==========================================
         // DATABASE HELPERS FOR SAVING FILE HANDLE
@@ -431,6 +464,7 @@
             if (contents && contents.trim().length > 0) {
                 data = JSON.parse(contents);
                 if (!data.categories) data.categories = [...defaultCategories];
+                if (!data.paymentMethods) data.paymentMethods = [...defaultPaymentMethods];
             } else {
                 await saveToFile(); 
             }
@@ -442,7 +476,7 @@
             });
             
             updateDashboard();
-            populateCategories(); 
+            populateLists(); 
             
             if(document.getElementById('transactions').classList.contains('active')) {
                 renderTransactionsTable();
@@ -477,13 +511,15 @@
             try { 
                 data = JSON.parse(fallbackData); 
                 if (!data.categories) data.categories = [...defaultCategories];
+                if (!data.paymentMethods) data.paymentMethods = [...defaultPaymentMethods];
             } catch(e){}
         }
 
         // ==========================================
         // UI & NAVIGATION
         // ==========================================
-        function populateCategories() {
+        function populateLists() {
+            // Categories
             const categorySelect = document.getElementById('category');
             categorySelect.innerHTML = '';
             data.categories.sort().forEach(cat => {
@@ -491,11 +527,26 @@
                 categorySelect.add(opt);
             });
 
-            const masterList = document.getElementById('master-categories-list');
-            masterList.innerHTML = '';
+            const masterCatList = document.getElementById('master-categories-list');
+            masterCatList.innerHTML = '';
             data.categories.forEach(cat => {
-                const pill = document.createElement('span'); pill.className = 'category-pill mb-2'; pill.innerText = cat;
-                masterList.appendChild(pill);
+                const pill = document.createElement('span'); pill.className = 'badge-pill mb-2'; pill.innerText = cat;
+                masterCatList.appendChild(pill);
+            });
+
+            // Payment Methods
+            const paymentMethodSelect = document.getElementById('payment-method');
+            paymentMethodSelect.innerHTML = '';
+            data.paymentMethods.sort().forEach(pm => {
+                const opt = document.createElement('option'); opt.value = pm; opt.text = pm;
+                paymentMethodSelect.add(opt);
+            });
+
+            const masterPMList = document.getElementById('master-payment-methods-list');
+            masterPMList.innerHTML = '';
+            data.paymentMethods.forEach(pm => {
+                const pill = document.createElement('span'); pill.className = 'badge-pill mb-2 border-pink-500/30 bg-pink-500/10 text-pink-200'; pill.innerText = pm;
+                masterPMList.appendChild(pill);
             });
         }
 
@@ -569,16 +620,12 @@
             const index = data.transactions.findIndex(t => t.id === id);
             if (index > -1) {
                 const t = data.transactions[index];
-                
-                // Reverse the balance impact
                 if (t.type === 'expense') data.accounts[t.account] += t.amount;
                 else data.accounts[t.account] -= t.amount;
                 
-                // Remove from array and save
                 data.transactions.splice(index, 1);
                 await saveToFile();
                 
-                // Refresh UI
                 renderTransactionsTable();
                 updateDashboard();
             }
@@ -594,7 +641,10 @@
                 document.getElementById('account').value = t.account;
                 document.getElementById('category').value = t.category;
                 
-                // Update UI hints for editing mode
+                if (t.paymentMethod) {
+                    document.getElementById('payment-method').value = t.paymentMethod;
+                }
+                
                 document.getElementById('insert-title').innerText = 'Edit Record';
                 const btn = document.getElementById('save-btn');
                 btn.innerHTML = '<i class="fa-solid fa-pen mr-2"></i> Update Record';
@@ -613,16 +663,15 @@
             const amountVal = parseFloat(document.getElementById('amount').value);
             const accountVal = document.getElementById('account').value;
             const typeVal = document.getElementById('type').value;
+            const paymentMethodVal = document.getElementById('payment-method').value;
 
-            // If we are editing, first reverse the OLD transaction's impact
             if (editingTransactionId) {
                 const oldIndex = data.transactions.findIndex(t => t.id === editingTransactionId);
                 if (oldIndex > -1) {
                     const oldT = data.transactions[oldIndex];
                     if (oldT.type === 'expense') data.accounts[oldT.account] += oldT.amount;
                     else data.accounts[oldT.account] -= oldT.amount;
-                    
-                    data.transactions.splice(oldIndex, 1); // Remove old record
+                    data.transactions.splice(oldIndex, 1);
                 }
             }
             
@@ -632,17 +681,16 @@
                 amount: amountVal,
                 account: accountVal,
                 category: document.getElementById('category').value,
+                paymentMethod: paymentMethodVal,
                 date: document.getElementById('date').value
             };
 
-            // Apply NEW transaction impact
             if (trans.type === 'expense') data.accounts[accountVal] -= amountVal;
             else data.accounts[accountVal] += amountVal;
             
             data.transactions.push(trans);
             await saveToFile();
             
-            // Reset Edit State
             editingTransactionId = null;
             document.getElementById('insert-title').innerText = 'Add New Record';
 
@@ -699,7 +747,7 @@
             if(newCat && !data.categories.some(c => c.toLowerCase() === newCat.toLowerCase())) {
                 data.categories.push(newCat);
                 await saveToFile();
-                populateCategories(); 
+                populateLists(); 
                 inputEl.value = '';
                 const btn = document.getElementById('save-category-btn');
                 const orig = btn.innerHTML;
@@ -710,6 +758,26 @@
                     btn.classList.replace('from-emerald-500', 'from-secondary'); btn.classList.replace('to-emerald-600', 'to-pink-600');
                 }, 1500);
             } else { alert("Category exists or is invalid."); }
+        });
+
+        document.getElementById('payment-method-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const inputEl = document.getElementById('new-payment-method-input');
+            const newPM = inputEl.value.trim();
+            if(newPM && !data.paymentMethods.some(p => p.toLowerCase() === newPM.toLowerCase())) {
+                data.paymentMethods.push(newPM);
+                await saveToFile();
+                populateLists(); 
+                inputEl.value = '';
+                const btn = document.getElementById('save-payment-method-btn');
+                const orig = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+                btn.classList.replace('from-secondary', 'from-emerald-500'); btn.classList.replace('to-pink-600', 'to-emerald-600');
+                setTimeout(() => {
+                    btn.innerHTML = orig;
+                    btn.classList.replace('from-emerald-500', 'from-secondary'); btn.classList.replace('to-emerald-600', 'to-pink-600');
+                }, 1500);
+            } else { alert("Payment Method exists or is invalid."); }
         });
 
         // ==========================================
@@ -758,6 +826,9 @@
                 const icon = isExp ? 'fa-arrow-down' : 'fa-arrow-up';
                 const bg = isExp ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20';
                 const iconBg = isExp ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400';
+                
+                // Format the sub-text to include payment method if it exists (for backward compatibility)
+                const pmText = t.paymentMethod ? ` • ${t.paymentMethod}` : '';
 
                 const card = document.createElement('div');
                 card.className = `flex justify-between items-center p-3 md:p-4 rounded-xl border ${bg}`;
@@ -768,7 +839,7 @@
                         </div>
                         <div>
                             <p class="font-bold text-sm md:text-base">${t.category}</p>
-                            <p class="text-[10px] md:text-xs text-gray-400">${t.date} • ${t.account}</p>
+                            <p class="text-[10px] md:text-xs text-gray-400">${t.date} • ${t.account}${pmText}</p>
                         </div>
                     </div>
                     <div class="flex flex-col items-end gap-1 md:gap-2">
@@ -812,7 +883,7 @@
             });
         }
 
-        populateCategories(); updateDashboard();
+        populateLists(); updateDashboard();
         document.getElementById('date').value = new Date().toISOString().split('T')[0];
     </script>
 </body>
