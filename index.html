@@ -361,9 +361,10 @@
                     </div>
                 </form>
 
+                <!-- NEW: Data Management Import / Export -->
                 <div class="mt-8 border-t border-gray-700/50 pt-6 md:pt-8">
                     <h3 class="text-lg md:text-xl font-semibold mb-4 text-white">Data Management (DuckDB)</h3>
-                    <div class="flex flex-col md:flex-row gap-4">
+                    <div class="flex flex-col md:flex-row gap-4 mb-4">
                         <button onclick="exportDataCSV()" class="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:opacity-90 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform flex justify-center items-center gap-2">
                             <i class="fa-solid fa-download"></i> Export to CSV
                         </button>
@@ -373,6 +374,14 @@
                                 <i class="fa-solid fa-upload"></i> Import CSV
                             </button>
                         </div>
+                    </div>
+                    <!-- Legacy JSON Import -->
+                    <div class="relative">
+                        <input type="file" id="legacy-import-input" accept=".json" class="hidden" onchange="importLegacyJSON(event)">
+                        <button onclick="document.getElementById('legacy-import-input').click()" class="w-full bg-gradient-to-r from-yellow-500 to-orange-600 hover:opacity-90 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform flex justify-center items-center gap-2">
+                            <i class="fa-solid fa-file-code"></i> Import Legacy JSON Data
+                        </button>
+                        <p class="text-[10px] text-gray-400 mt-2 text-center">Use this to migrate your old VaultPro data to the new DuckDB system.</p>
                     </div>
                 </div>
 
@@ -549,7 +558,7 @@
         });
 
         // ==========================================
-        // IMPORT / EXPORT (CSV)
+        // IMPORT / EXPORT (CSV & LEGACY JSON)
         // ==========================================
         window.exportDataCSV = async function() {
             try {
@@ -582,11 +591,86 @@
                 
                 await persistDB();
                 updateDashboard();
+                if(document.getElementById('transactions').classList.contains('active')) refreshTxnViews();
+                
                 alert("Data imported successfully!");
                 event.target.value = ''; // Reset input
             } catch(err) {
                 console.error(err);
                 alert("Import failed. Ensure the CSV format matches VaultPro's schema.");
+            }
+        };
+
+        // NEW: Legacy JSON Importer
+        window.importLegacyJSON = async function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            try {
+                const text = await file.text();
+                const legacyData = JSON.parse(text);
+
+                // 1. Recover Settings & Calculate Initial Balances
+                if (legacyData.monthlyBudget) settingsData.monthlyBudget = legacyData.monthlyBudget;
+                if (legacyData.categories) settingsData.categories = legacyData.categories;
+                if (legacyData.paymentMethods) settingsData.paymentMethods = legacyData.paymentMethods;
+
+                if (legacyData.accounts) {
+                    let initUBI = legacyData.accounts.UBI || 0;
+                    let initHDFC = legacyData.accounts.HDFC || 0;
+                    let initAxis = legacyData.accounts.Axis || 0;
+
+                    // Backtrack the initial balance by reversing all transactions
+                    if (legacyData.transactions) {
+                        legacyData.transactions.forEach(t => {
+                            if (t.type === 'expense') {
+                                if (t.account === 'UBI') initUBI += t.amount;
+                                if (t.account === 'HDFC') initHDFC += t.amount;
+                                if (t.account === 'Axis') initAxis += t.amount;
+                            } else {
+                                if (t.account === 'UBI') initUBI -= t.amount;
+                                if (t.account === 'HDFC') initHDFC -= t.amount;
+                                if (t.account === 'Axis') initAxis -= t.amount;
+                            }
+                        });
+                    }
+                    settingsData.initialAccounts = { UBI: initUBI, HDFC: initHDFC, Axis: initAxis };
+                }
+                saveSettings();
+
+                // 2. Import Transactions into DuckDB
+                if (legacyData.transactions && legacyData.transactions.length > 0) {
+                    const txnsJsonStr = JSON.stringify(legacyData.transactions);
+                    const buffer = new TextEncoder().encode(txnsJsonStr);
+                    await window.db.registerFileBuffer('legacy.json', buffer);
+
+                    const conn = await window.db.connect();
+                    await conn.query(`
+                        INSERT INTO transactions
+                        SELECT CAST(id AS BIGINT), type, CAST(amount AS DOUBLE), account, category, paymentMethod, date as txn_date
+                        FROM read_json_auto('legacy.json')
+                    `);
+                    await conn.close();
+                    await persistDB();
+                }
+
+                populateLists();
+                updateDashboard();
+                if(document.getElementById('transactions').classList.contains('active')) refreshTxnViews();
+
+                alert("Legacy JSON imported successfully!");
+                event.target.value = ''; // Reset input
+
+                // Switch to Settings tab to update form fields
+                if(document.getElementById('settings').classList.contains('active')){
+                    document.getElementById('monthly-budget-input').value = settingsData.monthlyBudget || 0;
+                    document.getElementById('update-bal-ubi').value = settingsData.initialAccounts.UBI || 0;
+                    document.getElementById('update-bal-hdfc').value = settingsData.initialAccounts.HDFC || 0;
+                    document.getElementById('update-bal-axis').value = settingsData.initialAccounts.Axis || 0;
+                }
+
+            } catch (err) {
+                console.error("Migration Error:", err);
+                alert("Import failed. Are you sure this is the old VaultPro JSON file?");
             }
         };
 
