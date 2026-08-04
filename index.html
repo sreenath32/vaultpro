@@ -59,9 +59,12 @@
             background: rgba(99, 102, 241, 0.15);
             border: 1px solid rgba(99, 102, 241, 0.3);
             color: #c7d2fe;
-            padding: 4px 12px;
+            padding: 6px 14px;
             border-radius: 9999px;
             font-size: 0.875rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -180,28 +183,9 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-                <div class="glass p-5 rounded-2xl border-l-4 md:border-l-0 md:border-t-4 border-blue-500 flex justify-between items-center">
-                    <div>
-                        <p class="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider mb-1">Union Bank of India</p>
-                        <h4 class="text-xl md:text-2xl font-bold" id="bal-ubi">₹0</h4>
-                    </div>
-                    <i class="fa-solid fa-building-columns text-2xl md:text-3xl text-blue-500/20"></i>
-                </div>
-                <div class="glass p-5 rounded-2xl border-l-4 md:border-l-0 md:border-t-4 border-red-500 flex justify-between items-center">
-                    <div>
-                        <p class="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider mb-1">HDFC Bank</p>
-                        <h4 class="text-xl md:text-2xl font-bold" id="bal-hdfc">₹0</h4>
-                    </div>
-                    <i class="fa-solid fa-building-columns text-2xl md:text-3xl text-red-500/20"></i>
-                </div>
-                <div class="glass p-5 rounded-2xl border-l-4 md:border-l-0 md:border-t-4 border-pink-500 flex justify-between items-center">
-                    <div>
-                        <p class="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider mb-1">Axis Bank</p>
-                        <h4 class="text-xl md:text-2xl font-bold" id="bal-axis">₹0</h4>
-                    </div>
-                    <i class="fa-solid fa-building-columns text-2xl md:text-3xl text-pink-500/20"></i>
-                </div>
+            <!-- Dynamic Accounts Grid -->
+            <div id="dashboard-accounts-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                <!-- Dynamically populated -->
             </div>
         </div>
 
@@ -234,10 +218,8 @@
                         </div>
                         <div>
                             <label class="block text-xs md:text-sm text-gray-400 mb-2">Account</label>
-                            <select id="account" class="w-full input-glass rounded-lg px-4 py-3 appearance-none">
-                                <option value="UBI">Union Bank of India</option>
-                                <option value="HDFC">HDFC</option>
-                                <option value="Axis">Axis</option>
+                            <select id="account" class="w-full input-glass rounded-lg px-4 py-3 appearance-none" required>
+                                <!-- Dynamically populated -->
                             </select>
                         </div>
                     </div>
@@ -273,32 +255,16 @@
                 </div>
             </div>
 
-            <!-- Bank Wise Summary (Always visible) -->
-            <div class="grid grid-cols-3 gap-2 md:gap-4 mb-4">
-                <div class="glass p-2 md:p-3 rounded-xl border-t-2 border-blue-500 text-center md:text-left">
-                    <p class="text-[9px] md:text-xs text-gray-400 uppercase tracking-wider mb-1">UBI</p>
-                    <h4 class="text-xs md:text-lg font-bold text-white truncate" id="txn-ubi-bal">₹0</h4>
-                    <p class="text-[9px] md:text-xs text-red-400 mt-0.5 truncate" id="txn-ubi-exp">Out: ₹0</p>
-                </div>
-                <div class="glass p-2 md:p-3 rounded-xl border-t-2 border-red-500 text-center md:text-left">
-                    <p class="text-[9px] md:text-xs text-gray-400 uppercase tracking-wider mb-1">HDFC</p>
-                    <h4 class="text-xs md:text-lg font-bold text-white truncate" id="txn-hdfc-bal">₹0</h4>
-                    <p class="text-[9px] md:text-xs text-red-400 mt-0.5 truncate" id="txn-hdfc-exp">Out: ₹0</p>
-                </div>
-                <div class="glass p-2 md:p-3 rounded-xl border-t-2 border-pink-500 text-center md:text-left">
-                    <p class="text-[9px] md:text-xs text-gray-400 uppercase tracking-wider mb-1">Axis</p>
-                    <h4 class="text-xs md:text-lg font-bold text-white truncate" id="txn-axis-bal">₹0</h4>
-                    <p class="text-[9px] md:text-xs text-red-400 mt-0.5 truncate" id="txn-axis-exp">Out: ₹0</p>
-                </div>
+            <!-- Dynamic Bank Wise Summary -->
+            <div id="txn-accounts-summary" class="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-4 mb-4">
+                <!-- Dynamically populated -->
             </div>
 
             <div class="flex justify-end mb-4">
                 <div class="relative">
                     <select id="txn-account-filter" class="input-glass rounded-lg px-4 py-2 pr-8 text-xs md:text-sm appearance-none outline-none cursor-pointer" onchange="refreshTxnViews()">
                         <option value="all">All Accounts Filter</option>
-                        <option value="UBI">Show UBI Only</option>
-                        <option value="HDFC">Show HDFC Only</option>
-                        <option value="Axis">Show Axis Only</option>
+                        <!-- Dynamically populated -->
                     </select>
                     <i class="fa-solid fa-chevron-down absolute right-3 top-2.5 text-gray-400 text-xs pointer-events-none"></i>
                 </div>
@@ -320,49 +286,75 @@
         <!-- SETTINGS TAB -->
         <div id="settings" class="section-view">
             <h2 class="text-2xl md:text-3xl font-bold mb-6 md:mb-8">Settings</h2>
-            <div class="glass p-5 md:p-8 rounded-2xl max-w-2xl">
+            <div class="glass p-5 md:p-8 rounded-2xl max-w-2xl space-y-8">
                 
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg md:text-xl font-semibold text-white">Initial Account Balances</h3>
+                <!-- Financial Goals -->
+                <div>
+                    <h3 class="text-lg md:text-xl font-semibold mb-4 text-white">Financial Goals</h3>
+                    <form id="budget-form" class="space-y-4">
+                        <div>
+                            <label class="block text-xs md:text-sm text-gray-400 mb-2">Target Monthly Budget (₹)</label>
+                            <div class="flex flex-col md:flex-row gap-3">
+                                <div class="relative flex-1">
+                                    <span class="absolute left-4 top-3 text-gray-400">₹</span>
+                                    <input type="number" step="0.01" id="monthly-budget-input" class="w-full input-glass rounded-lg pl-8 pr-4 py-3" placeholder="50000" required>
+                                </div>
+                                <button type="submit" id="save-budget-btn" class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform">
+                                    Update Budget
+                                </button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
-                <form id="balances-form" class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-xs md:text-sm text-gray-400 mb-2">UBI (₹)</label>
-                            <input type="number" step="0.01" id="update-bal-ubi" class="w-full input-glass rounded-lg px-4 py-3" placeholder="0.00" required>
-                        </div>
-                        <div>
-                            <label class="block text-xs md:text-sm text-gray-400 mb-2">HDFC (₹)</label>
-                            <input type="number" step="0.01" id="update-bal-hdfc" class="w-full input-glass rounded-lg px-4 py-3" placeholder="0.00" required>
-                        </div>
-                        <div>
-                            <label class="block text-xs md:text-sm text-gray-400 mb-2">Axis (₹)</label>
-                            <input type="number" step="0.01" id="update-bal-axis" class="w-full input-glass rounded-lg px-4 py-3" placeholder="0.00" required>
-                        </div>
-                    </div>
-                    <button type="submit" id="save-balances-btn" class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform">
-                        Update Initial Balances
-                    </button>
-                </form>
 
-                <h3 class="text-lg md:text-xl font-semibold mb-4 text-white mt-8 border-t border-gray-700/50 pt-6 md:pt-8">Financial Goals</h3>
-                <form id="budget-form" class="space-y-4">
-                    <div>
-                        <label class="block text-xs md:text-sm text-gray-400 mb-2">Target Monthly Budget (₹)</label>
+                <!-- Master Accounts (Banks) -->
+                <div class="border-t border-gray-700/50 pt-6">
+                    <h3 class="text-lg md:text-xl font-semibold mb-4 text-white">Master Bank Accounts</h3>
+                    <form id="account-form" class="space-y-4 mb-4">
                         <div class="flex flex-col md:flex-row gap-3">
+                            <input type="text" id="new-account-name" class="flex-1 input-glass rounded-lg px-4 py-3" placeholder="Account Name (e.g., SBI)" required>
                             <div class="relative flex-1">
                                 <span class="absolute left-4 top-3 text-gray-400">₹</span>
-                                <input type="number" step="0.01" id="monthly-budget-input" class="w-full input-glass rounded-lg pl-8 pr-4 py-3" placeholder="50000" required>
+                                <input type="number" step="0.01" id="new-account-bal" class="w-full input-glass rounded-lg pl-8 pr-4 py-3" placeholder="Initial Balance" required>
                             </div>
-                            <button type="submit" id="save-budget-btn" class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform">
-                                Update Budget
+                            <button type="submit" id="save-account-btn" class="bg-gradient-to-r from-secondary to-pink-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform">
+                                <i class="fa-solid fa-plus md:mr-1"></i> <span class="md:hidden">Add</span>
                             </button>
                         </div>
-                    </div>
-                </form>
+                    </form>
+                    <div id="master-accounts-list" class="space-y-2"></div>
+                </div>
 
-                <!-- NEW: Data Management Import / Export -->
-                <div class="mt-8 border-t border-gray-700/50 pt-6 md:pt-8">
+                <!-- Master Categories -->
+                <div class="border-t border-gray-700/50 pt-6">
+                    <h3 class="text-lg md:text-xl font-semibold mb-4 text-white">Master Categories</h3>
+                    <form id="category-form" class="space-y-4 mb-4">
+                        <div class="flex flex-col md:flex-row gap-3">
+                            <input type="text" id="new-category-input" class="flex-1 input-glass rounded-lg px-4 py-3" placeholder="Add category (e.g., Pet Care)" required>
+                            <button type="submit" id="save-category-btn" class="bg-gradient-to-r from-secondary to-pink-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform">
+                                <i class="fa-solid fa-plus md:mr-1"></i> <span class="md:hidden">Add</span>
+                            </button>
+                        </div>
+                    </form>
+                    <div id="master-categories-list" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- Master Payment Methods -->
+                <div class="border-t border-gray-700/50 pt-6">
+                    <h3 class="text-lg md:text-xl font-semibold mb-4 text-white">Master Payment Methods</h3>
+                    <form id="payment-method-form" class="space-y-4 mb-4">
+                        <div class="flex flex-col md:flex-row gap-3">
+                            <input type="text" id="new-payment-method-input" class="flex-1 input-glass rounded-lg px-4 py-3" placeholder="Add payment (e.g., Google Pay)" required>
+                            <button type="submit" id="save-payment-method-btn" class="bg-gradient-to-r from-secondary to-pink-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform">
+                                <i class="fa-solid fa-plus md:mr-1"></i> <span class="md:hidden">Add</span>
+                            </button>
+                        </div>
+                    </form>
+                    <div id="master-payment-methods-list" class="flex flex-wrap gap-2"></div>
+                </div>
+                
+                <!-- Data Management -->
+                <div class="border-t border-gray-700/50 pt-6">
                     <h3 class="text-lg md:text-xl font-semibold mb-4 text-white">Data Management (DuckDB)</h3>
                     <div class="flex flex-col md:flex-row gap-4 mb-4">
                         <button onclick="exportDataCSV()" class="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:opacity-90 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform flex justify-center items-center gap-2">
@@ -383,32 +375,6 @@
                         </button>
                         <p class="text-[10px] text-gray-400 mt-2 text-center">Use this to migrate your old VaultPro data to the new DuckDB system.</p>
                     </div>
-                </div>
-
-                <div class="mt-8 border-t border-gray-700/50 pt-6 md:pt-8">
-                    <h3 class="text-lg md:text-xl font-semibold mb-4 text-white">Master Categories</h3>
-                    <form id="category-form" class="space-y-4 mb-6">
-                        <div class="flex flex-col md:flex-row gap-3">
-                            <input type="text" id="new-category-input" class="flex-1 input-glass rounded-lg px-4 py-3" placeholder="Add category (e.g., Pet Care)" required>
-                            <button type="submit" id="save-category-btn" class="bg-gradient-to-r from-secondary to-pink-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform">
-                                <i class="fa-solid fa-plus md:mr-1"></i> <span class="md:hidden">Add</span>
-                            </button>
-                        </div>
-                    </form>
-                    <div id="master-categories-list" class="flex flex-wrap gap-2"></div>
-                </div>
-
-                <div class="mt-8 border-t border-gray-700/50 pt-6 md:pt-8">
-                    <h3 class="text-lg md:text-xl font-semibold mb-4 text-white">Master Payment Methods</h3>
-                    <form id="payment-method-form" class="space-y-4 mb-6">
-                        <div class="flex flex-col md:flex-row gap-3">
-                            <input type="text" id="new-payment-method-input" class="flex-1 input-glass rounded-lg px-4 py-3" placeholder="Add payment (e.g., Google Pay)" required>
-                            <button type="submit" id="save-payment-method-btn" class="bg-gradient-to-r from-secondary to-pink-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform">
-                                <i class="fa-solid fa-plus md:mr-1"></i> <span class="md:hidden">Add</span>
-                            </button>
-                        </div>
-                    </form>
-                    <div id="master-payment-methods-list" class="flex flex-wrap gap-2"></div>
                 </div>
 
             </div>
@@ -438,22 +404,38 @@
     </nav>
 
     <script>
+        // Color palette for dynamic accounts
+        const borderColors = ['border-blue-500', 'border-red-500', 'border-pink-500', 'border-emerald-500', 'border-purple-500', 'border-orange-500'];
+        const textColors = ['text-blue-500/20', 'text-red-500/20', 'text-pink-500/20', 'text-emerald-500/20', 'text-purple-500/20', 'text-orange-500/20'];
+
         // ==========================================
-        // LOCAL SETTINGS MANAGEMENT
+        // LOCAL SETTINGS MANAGEMENT & MIGRATION
         // ==========================================
         const defaultCategories = ["Groceries", "Rent/Mortgage", "Utilities", "Transportation", "Dining Out", "Entertainment", "Healthcare", "Salary", "Investments", "Miscellaneous"];
         const defaultPaymentMethods = ["UPI", "Credit Card", "Debit Card", "Cash", "Net Banking"];
+        const defaultAccounts = [{name: 'UBI', initBal: 0}, {name: 'HDFC', initBal: 0}, {name: 'Axis', initBal: 0}];
         
         let settingsData = { 
             monthlyBudget: 50000, 
-            initialAccounts: { UBI: 0, HDFC: 0, Axis: 0 }, 
+            accounts: [...defaultAccounts], 
             categories: [...defaultCategories],
             paymentMethods: [...defaultPaymentMethods]
         };
 
         const savedSettings = localStorage.getItem('vaultpro_settings');
         if (savedSettings) {
-            try { settingsData = JSON.parse(savedSettings); } catch(e){}
+            try { 
+                let parsed = JSON.parse(savedSettings); 
+                // Backward compatibility migration from initialAccounts -> accounts array
+                if (parsed.initialAccounts) {
+                    parsed.accounts = [];
+                    for (const [key, val] of Object.entries(parsed.initialAccounts)) {
+                        parsed.accounts.push({ name: key, initBal: val });
+                    }
+                    delete parsed.initialAccounts;
+                }
+                settingsData = {...settingsData, ...parsed};
+            } catch(e){}
         }
 
         function saveSettings() {
@@ -480,7 +462,6 @@
 
         async function initDuckDB() {
             try {
-                // Dynamically import DuckDB
                 const duckdb = await import("https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.32.0/+esm");
                 const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
                 const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
@@ -496,7 +477,6 @@
                 URL.revokeObjectURL(worker_url);
 
                 const conn = await window.db.connect();
-                // Create schema
                 await conn.query(`
                     CREATE TABLE IF NOT EXISTS transactions (
                         id BIGINT PRIMARY KEY,
@@ -509,7 +489,6 @@
                     );
                 `);
                 
-                // Attempt to restore from IndexedDB
                 const idb = await getIndexedDB();
                 const tx = idb.transaction('store', 'readonly');
                 const req = tx.objectStore('store').get('duckdb_backup');
@@ -533,7 +512,6 @@
             }
         }
 
-        // Helper to query DB and return JSON array
         async function queryDB(sql) {
             const conn = await window.db.connect();
             const result = await conn.query(sql);
@@ -541,7 +519,6 @@
             return result.toArray().map(row => row.toJSON());
         }
 
-        // Helper to sync DuckDB state back to IndexedDB (Auto-save)
         async function persistDB() {
             const conn = await window.db.connect();
             await conn.query(`COPY transactions TO 'backup.parquet' (FORMAT PARQUET);`);
@@ -594,14 +571,13 @@
                 if(document.getElementById('transactions').classList.contains('active')) refreshTxnViews();
                 
                 alert("Data imported successfully!");
-                event.target.value = ''; // Reset input
+                event.target.value = ''; 
             } catch(err) {
                 console.error(err);
                 alert("Import failed. Ensure the CSV format matches VaultPro's schema.");
             }
         };
 
-        // NEW: Legacy JSON Importer
         window.importLegacyJSON = async function(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -609,35 +585,28 @@
                 const text = await file.text();
                 const legacyData = JSON.parse(text);
 
-                // 1. Recover Settings & Calculate Initial Balances
                 if (legacyData.monthlyBudget) settingsData.monthlyBudget = legacyData.monthlyBudget;
                 if (legacyData.categories) settingsData.categories = legacyData.categories;
                 if (legacyData.paymentMethods) settingsData.paymentMethods = legacyData.paymentMethods;
 
                 if (legacyData.accounts) {
-                    let initUBI = legacyData.accounts.UBI || 0;
-                    let initHDFC = legacyData.accounts.HDFC || 0;
-                    let initAxis = legacyData.accounts.Axis || 0;
-
-                    // Backtrack the initial balance by reversing all transactions
-                    if (legacyData.transactions) {
-                        legacyData.transactions.forEach(t => {
-                            if (t.type === 'expense') {
-                                if (t.account === 'UBI') initUBI += t.amount;
-                                if (t.account === 'HDFC') initHDFC += t.amount;
-                                if (t.account === 'Axis') initAxis += t.amount;
-                            } else {
-                                if (t.account === 'UBI') initUBI -= t.amount;
-                                if (t.account === 'HDFC') initHDFC -= t.amount;
-                                if (t.account === 'Axis') initAxis -= t.amount;
-                            }
-                        });
+                    let accs = [];
+                    for (const [key, val] of Object.entries(legacyData.accounts)) {
+                        let calcBal = val;
+                        if (legacyData.transactions) {
+                            legacyData.transactions.forEach(t => {
+                                if(t.account === key) {
+                                    if(t.type === 'expense') calcBal += t.amount;
+                                    else calcBal -= t.amount;
+                                }
+                            });
+                        }
+                        accs.push({name: key, initBal: calcBal});
                     }
-                    settingsData.initialAccounts = { UBI: initUBI, HDFC: initHDFC, Axis: initAxis };
+                    settingsData.accounts = accs;
                 }
                 saveSettings();
 
-                // 2. Import Transactions into DuckDB
                 if (legacyData.transactions && legacyData.transactions.length > 0) {
                     const txnsJsonStr = JSON.stringify(legacyData.transactions);
                     const buffer = new TextEncoder().encode(txnsJsonStr);
@@ -658,14 +627,10 @@
                 if(document.getElementById('transactions').classList.contains('active')) refreshTxnViews();
 
                 alert("Legacy JSON imported successfully!");
-                event.target.value = ''; // Reset input
+                event.target.value = ''; 
 
-                // Switch to Settings tab to update form fields
                 if(document.getElementById('settings').classList.contains('active')){
                     document.getElementById('monthly-budget-input').value = settingsData.monthlyBudget || 0;
-                    document.getElementById('update-bal-ubi').value = settingsData.initialAccounts.UBI || 0;
-                    document.getElementById('update-bal-hdfc').value = settingsData.initialAccounts.HDFC || 0;
-                    document.getElementById('update-bal-axis').value = settingsData.initialAccounts.Axis || 0;
                 }
 
             } catch (err) {
@@ -675,35 +640,69 @@
         };
 
         // ==========================================
-        // UI & NAVIGATION
+        // UI POPULATION & DYNAMIC LISTS
         // ==========================================
         function populateLists() {
+            // Dropdowns
+            const accSelect = document.getElementById('account');
+            const txnFilter = document.getElementById('txn-account-filter');
+            accSelect.innerHTML = '';
+            txnFilter.innerHTML = '<option value="all">All Accounts Filter</option>';
+            
+            settingsData.accounts.forEach(a => {
+                accSelect.add(new Option(a.name, a.name));
+                txnFilter.add(new Option(`Show ${a.name} Only`, a.name));
+            });
+
             const categorySelect = document.getElementById('category');
             categorySelect.innerHTML = '';
-            settingsData.categories.sort().forEach(cat => {
-                const opt = document.createElement('option'); opt.value = cat; opt.text = cat;
-                categorySelect.add(opt);
+            settingsData.categories.sort().forEach(cat => categorySelect.add(new Option(cat, cat)));
+
+            const pmSelect = document.getElementById('payment-method');
+            pmSelect.innerHTML = '';
+            settingsData.paymentMethods.sort().forEach(pm => pmSelect.add(new Option(pm, pm)));
+
+            // Settings Lists (Accounts)
+            const accList = document.getElementById('master-accounts-list');
+            accList.innerHTML = '';
+            settingsData.accounts.forEach((acc, i) => {
+                const div = document.createElement('div');
+                div.className = 'glass p-3 rounded-lg flex justify-between items-center';
+                div.innerHTML = `
+                    <div>
+                        <p class="font-bold text-white text-sm">${acc.name}</p>
+                        <p class="text-xs text-gray-400">Init Bal: ₹${acc.initBal.toLocaleString('en-IN')}</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="triggerEditAccount(${i})" class="text-gray-400 hover:text-blue-400"><i class="fa-solid fa-pen text-sm"></i></button>
+                        <button onclick="triggerDeleteAccount(${i})" class="text-gray-400 hover:text-red-400"><i class="fa-solid fa-trash text-sm"></i></button>
+                    </div>
+                `;
+                accList.appendChild(div);
             });
 
-            const masterCatList = document.getElementById('master-categories-list');
-            masterCatList.innerHTML = '';
-            settingsData.categories.forEach(cat => {
-                const pill = document.createElement('span'); pill.className = 'badge-pill mb-2'; pill.innerText = cat;
-                masterCatList.appendChild(pill);
+            // Settings Lists (Categories)
+            const catList = document.getElementById('master-categories-list');
+            catList.innerHTML = '';
+            settingsData.categories.forEach((cat, i) => {
+                const span = document.createElement('span');
+                span.className = 'badge-pill';
+                span.innerHTML = `${cat} 
+                    <button onclick="triggerEditCategory(${i})" class="ml-1 text-gray-400 hover:text-blue-400"><i class="fa-solid fa-pen text-[10px]"></i></button>
+                    <button onclick="triggerDeleteCategory(${i})" class="ml-1 text-gray-400 hover:text-red-400"><i class="fa-solid fa-xmark text-[10px]"></i></button>`;
+                catList.appendChild(span);
             });
 
-            const paymentMethodSelect = document.getElementById('payment-method');
-            paymentMethodSelect.innerHTML = '';
-            settingsData.paymentMethods.sort().forEach(pm => {
-                const opt = document.createElement('option'); opt.value = pm; opt.text = pm;
-                paymentMethodSelect.add(opt);
-            });
-
-            const masterPMList = document.getElementById('master-payment-methods-list');
-            masterPMList.innerHTML = '';
-            settingsData.paymentMethods.forEach(pm => {
-                const pill = document.createElement('span'); pill.className = 'badge-pill mb-2 border-pink-500/30 bg-pink-500/10 text-pink-200'; pill.innerText = pm;
-                masterPMList.appendChild(pill);
+            // Settings Lists (Payment Methods)
+            const pmList = document.getElementById('master-payment-methods-list');
+            pmList.innerHTML = '';
+            settingsData.paymentMethods.forEach((pm, i) => {
+                const span = document.createElement('span');
+                span.className = 'badge-pill border-pink-500/30 bg-pink-500/10 text-pink-200';
+                span.innerHTML = `${pm} 
+                    <button onclick="triggerEditPM(${i})" class="ml-1 opacity-70 hover:opacity-100 hover:text-blue-400"><i class="fa-solid fa-pen text-[10px]"></i></button>
+                    <button onclick="triggerDeletePM(${i})" class="ml-1 opacity-70 hover:opacity-100 hover:text-red-400"><i class="fa-solid fa-xmark text-[10px]"></i></button>`;
+                pmList.appendChild(span);
             });
         }
         
@@ -732,9 +731,6 @@
             if(tabId === 'transactions') refreshTxnViews();
             if(tabId === 'settings') {
                 document.getElementById('monthly-budget-input').value = settingsData.monthlyBudget || 0;
-                document.getElementById('update-bal-ubi').value = settingsData.initialAccounts.UBI || 0;
-                document.getElementById('update-bal-hdfc').value = settingsData.initialAccounts.HDFC || 0;
-                document.getElementById('update-bal-axis').value = settingsData.initialAccounts.Axis || 0;
             }
         };
 
@@ -768,14 +764,132 @@
         };
 
         // ==========================================
-        // EDIT AND DELETE TRANSACTIONS
+        // MASTER DATA CRUD (ACCOUNTS, CATS, PMS)
+        // ==========================================
+        window.triggerEditAccount = async function(idx) {
+            const acc = settingsData.accounts[idx];
+            const newName = prompt("Edit Account Name:", acc.name);
+            if(newName === null || newName.trim() === "") return;
+            const newBal = prompt("Edit Initial Balance:", acc.initBal);
+            if(newBal === null || isNaN(parseFloat(newBal))) return;
+
+            const oldName = acc.name;
+            settingsData.accounts[idx] = { name: newName.trim(), initBal: parseFloat(newBal) };
+            saveSettings();
+
+            if(newName.trim() !== oldName) {
+                await queryDB(`UPDATE transactions SET account='${newName.trim().replace(/'/g, "''")}' WHERE account='${oldName.replace(/'/g, "''")}'`);
+                await persistDB();
+            }
+            populateLists(); updateDashboard();
+        }
+
+        window.triggerDeleteAccount = async function(idx) {
+            const acc = settingsData.accounts[idx];
+            if(confirm(`Delete account '${acc.name}'? WARNING: This will also DELETE ALL transactions associated with this account!`)) {
+                settingsData.accounts.splice(idx, 1);
+                saveSettings();
+                await queryDB(`DELETE FROM transactions WHERE account='${acc.name.replace(/'/g, "''")}'`);
+                await persistDB();
+                populateLists(); updateDashboard();
+            }
+        }
+
+        window.triggerEditCategory = async function(idx) {
+            const oldCat = settingsData.categories[idx];
+            const newCat = prompt("Edit Category Name:", oldCat);
+            if(newCat && newCat.trim() !== "" && newCat.trim() !== oldCat) {
+                settingsData.categories[idx] = newCat.trim();
+                saveSettings();
+                await queryDB(`UPDATE transactions SET category='${newCat.trim().replace(/'/g, "''")}' WHERE category='${oldCat.replace(/'/g, "''")}'`);
+                await persistDB();
+                populateLists(); updateDashboard();
+            }
+        }
+
+        window.triggerDeleteCategory = function(idx) {
+            if(confirm(`Delete category '${settingsData.categories[idx]}'? Existing transactions will keep the name, but it will be removed from dropdowns.`)) {
+                settingsData.categories.splice(idx, 1);
+                saveSettings(); populateLists();
+            }
+        }
+
+        window.triggerEditPM = async function(idx) {
+            const oldPm = settingsData.paymentMethods[idx];
+            const newPm = prompt("Edit Payment Method Name:", oldPm);
+            if(newPm && newPm.trim() !== "" && newPm.trim() !== oldPm) {
+                settingsData.paymentMethods[idx] = newPm.trim();
+                saveSettings();
+                await queryDB(`UPDATE transactions SET paymentMethod='${newPm.trim().replace(/'/g, "''")}' WHERE paymentMethod='${oldPm.replace(/'/g, "''")}'`);
+                await persistDB();
+                populateLists(); updateDashboard();
+            }
+        }
+
+        window.triggerDeletePM = function(idx) {
+            if(confirm(`Delete payment method '${settingsData.paymentMethods[idx]}'?`)) {
+                settingsData.paymentMethods.splice(idx, 1);
+                saveSettings(); populateLists();
+            }
+        }
+
+        // ==========================================
+        // SETTINGS FORMS SUBMISSIONS
+        // ==========================================
+        document.getElementById('account-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const name = document.getElementById('new-account-name').value.trim();
+            const bal = parseFloat(document.getElementById('new-account-bal').value) || 0;
+            if(name && !settingsData.accounts.some(a => a.name.toLowerCase() === name.toLowerCase())) {
+                settingsData.accounts.push({name, initBal: bal});
+                saveSettings();
+                populateLists(); updateDashboard();
+                this.reset();
+            } else { alert("Account exists or invalid."); }
+        });
+
+        document.getElementById('category-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const inputEl = document.getElementById('new-category-input');
+            const newCat = inputEl.value.trim();
+            if(newCat && !settingsData.categories.some(c => c.toLowerCase() === newCat.toLowerCase())) {
+                settingsData.categories.push(newCat);
+                saveSettings(); populateLists(); inputEl.value = '';
+            } else { alert("Category exists or invalid."); }
+        });
+
+        document.getElementById('payment-method-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const inputEl = document.getElementById('new-payment-method-input');
+            const newPM = inputEl.value.trim();
+            if(newPM && !settingsData.paymentMethods.some(p => p.toLowerCase() === newPM.toLowerCase())) {
+                settingsData.paymentMethods.push(newPM);
+                saveSettings(); populateLists(); inputEl.value = '';
+            } else { alert("Payment Method exists or invalid."); }
+        });
+
+        document.getElementById('budget-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            settingsData.monthlyBudget = parseFloat(document.getElementById('monthly-budget-input').value);
+            saveSettings(); updateDashboard();
+            const btn = document.getElementById('save-budget-btn');
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Updated';
+            btn.classList.replace('from-blue-500', 'from-emerald-500'); btn.classList.replace('to-indigo-600', 'to-emerald-600');
+            setTimeout(() => {
+                btn.innerHTML = orig;
+                btn.classList.replace('from-emerald-500', 'from-blue-500'); btn.classList.replace('to-emerald-600', 'to-indigo-600');
+            }, 1500);
+        });
+
+        // ==========================================
+        // TRANSACTIONS CRUD
         // ==========================================
         window.deleteTransaction = async function(id) {
             if (!confirm("Are you sure you want to delete this transaction?")) return;
             await queryDB(`DELETE FROM transactions WHERE id = ${id}`);
             await persistDB();
-            updateDashboard();
-            refreshTxnViews();
+            updateDashboard(); refreshTxnViews();
         };
 
         window.editTransaction = async function(id) {
@@ -799,9 +913,6 @@
             }
         };
 
-        // ==========================================
-        // FORM SUBMISSIONS
-        // ==========================================
         document.getElementById('transaction-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -845,80 +956,6 @@
             }, 1500);
         });
 
-        document.getElementById('budget-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            settingsData.monthlyBudget = parseFloat(document.getElementById('monthly-budget-input').value);
-            saveSettings();
-            updateDashboard();
-            
-            const btn = document.getElementById('save-budget-btn');
-            const orig = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-check"></i> Updated';
-            btn.classList.replace('from-blue-500', 'from-emerald-500'); btn.classList.replace('to-indigo-600', 'to-emerald-600');
-            setTimeout(() => {
-                btn.innerHTML = orig;
-                btn.classList.replace('from-emerald-500', 'from-blue-500'); btn.classList.replace('to-emerald-600', 'to-indigo-600');
-            }, 1500);
-        });
-
-        document.getElementById('balances-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            settingsData.initialAccounts.UBI = parseFloat(document.getElementById('update-bal-ubi').value) || 0;
-            settingsData.initialAccounts.HDFC = parseFloat(document.getElementById('update-bal-hdfc').value) || 0;
-            settingsData.initialAccounts.Axis = parseFloat(document.getElementById('update-bal-axis').value) || 0;
-            saveSettings();
-            updateDashboard();
-            
-            const btn = document.getElementById('save-balances-btn');
-            const orig = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-check"></i> Updated';
-            btn.classList.replace('from-emerald-500', 'from-blue-500'); btn.classList.replace('to-teal-600', 'to-indigo-600');
-            setTimeout(() => {
-                btn.innerHTML = orig;
-                btn.classList.replace('from-blue-500', 'from-emerald-500'); btn.classList.replace('to-indigo-600', 'to-teal-600');
-            }, 1500);
-        });
-
-        document.getElementById('category-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const inputEl = document.getElementById('new-category-input');
-            const newCat = inputEl.value.trim();
-            if(newCat && !settingsData.categories.some(c => c.toLowerCase() === newCat.toLowerCase())) {
-                settingsData.categories.push(newCat);
-                saveSettings();
-                populateLists(); 
-                inputEl.value = '';
-                const btn = document.getElementById('save-category-btn');
-                const orig = btn.innerHTML;
-                btn.innerHTML = '<i class="fa-solid fa-check"></i>';
-                btn.classList.replace('from-secondary', 'from-emerald-500'); btn.classList.replace('to-pink-600', 'to-emerald-600');
-                setTimeout(() => {
-                    btn.innerHTML = orig;
-                    btn.classList.replace('from-emerald-500', 'from-secondary'); btn.classList.replace('to-emerald-600', 'to-pink-600');
-                }, 1500);
-            }
-        });
-
-        document.getElementById('payment-method-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const inputEl = document.getElementById('new-payment-method-input');
-            const newPM = inputEl.value.trim();
-            if(newPM && !settingsData.paymentMethods.some(p => p.toLowerCase() === newPM.toLowerCase())) {
-                settingsData.paymentMethods.push(newPM);
-                saveSettings();
-                populateLists(); 
-                inputEl.value = '';
-                const btn = document.getElementById('save-payment-method-btn');
-                const orig = btn.innerHTML;
-                btn.innerHTML = '<i class="fa-solid fa-check"></i>';
-                btn.classList.replace('from-secondary', 'from-emerald-500'); btn.classList.replace('to-pink-600', 'to-emerald-600');
-                setTimeout(() => {
-                    btn.innerHTML = orig;
-                    btn.classList.replace('from-emerald-500', 'from-secondary'); btn.classList.replace('to-emerald-600', 'to-pink-600');
-                }, 1500);
-            }
-        });
-
         // ==========================================
         // DUCKDB SQL RENDER ENGINES
         // ==========================================
@@ -929,7 +966,6 @@
             const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
             const yesterdayStr = yesterday.toISOString().split('T')[0];
             
-            // SQL queries for Dashboard stats
             const stats = await queryDB(`
                 SELECT 
                     SUM(CASE WHEN txn_date = '${todayStr}' AND type='expense' THEN amount ELSE 0 END) as today_spend,
@@ -946,27 +982,38 @@
             const s = stats[0] || { today_spend: 0, yesterday_spend: 0, month_spend: 0 };
             const remainingBudget = (settingsData.monthlyBudget || 0) - (s.month_spend || 0);
 
-            // Compute Live Balances
-            let actUBI = settingsData.initialAccounts.UBI || 0;
-            let actHDFC = settingsData.initialAccounts.HDFC || 0;
-            let actAxis = settingsData.initialAccounts.Axis || 0;
+            // Compute Live Balances mapped dynamically
+            let totalBal = 0;
+            const diffMap = {};
+            diffs.forEach(d => diffMap[d.account] = d.diff);
 
-            diffs.forEach(d => {
-                if(d.account === 'UBI') actUBI += d.diff;
-                if(d.account === 'HDFC') actHDFC += d.diff;
-                if(d.account === 'Axis') actAxis += d.diff;
+            const dashGrid = document.getElementById('dashboard-accounts-grid');
+            dashGrid.innerHTML = '';
+
+            settingsData.accounts.forEach((acc, i) => {
+                const liveBal = acc.initBal + (diffMap[acc.name] || 0);
+                totalBal += liveBal;
+
+                const bCol = borderColors[i % borderColors.length];
+                const tCol = textColors[i % textColors.length];
+
+                dashGrid.innerHTML += `
+                    <div class="glass p-5 rounded-2xl border-l-4 md:border-l-0 md:border-t-4 ${bCol} flex justify-between items-center">
+                        <div>
+                            <p class="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider mb-1">${acc.name}</p>
+                            <h4 class="text-xl md:text-2xl font-bold">₹${liveBal.toLocaleString('en-IN')}</h4>
+                        </div>
+                        <i class="fa-solid fa-building-columns text-2xl md:text-3xl ${tCol}"></i>
+                    </div>
+                `;
             });
-            const totalBal = actUBI + actHDFC + actAxis;
 
             document.getElementById('display-monthly-budget').innerText = '₹' + (settingsData.monthlyBudget || 0).toLocaleString('en-IN');
             document.getElementById('today-spend').innerText = '₹' + (s.today_spend || 0).toLocaleString('en-IN');
             document.getElementById('yesterday-spend').innerText = '₹' + (s.yesterday_spend || 0).toLocaleString('en-IN');
             document.getElementById('month-expense').innerText = '₹' + (s.month_spend || 0).toLocaleString('en-IN');
             document.getElementById('remaining-budget').innerText = '₹' + remainingBudget.toLocaleString('en-IN');
-            
-            document.getElementById('bal-ubi').innerText = '₹' + actUBI.toLocaleString('en-IN');
-            document.getElementById('bal-hdfc').innerText = '₹' + actHDFC.toLocaleString('en-IN');
-            document.getElementById('bal-axis').innerText = '₹' + actAxis.toLocaleString('en-IN');
+            document.getElementById('total-balance-dash').innerText = '₹' + totalBal.toLocaleString('en-IN');
         }
         
         async function renderTxnSummary() {
@@ -980,30 +1027,25 @@
                 FROM transactions WHERE type='expense' AND txn_date LIKE '${currentGlobalMonth}%' GROUP BY account
             `);
 
-            let actUBI = settingsData.initialAccounts.UBI || 0;
-            let actHDFC = settingsData.initialAccounts.HDFC || 0;
-            let actAxis = settingsData.initialAccounts.Axis || 0;
+            const diffMap = {}; diffs.forEach(d => diffMap[d.account] = d.diff);
+            const outMap = {}; monthlyOut.forEach(d => outMap[d.account] = d.out);
 
-            diffs.forEach(d => {
-                if(d.account === 'UBI') actUBI += d.diff;
-                if(d.account === 'HDFC') actHDFC += d.diff;
-                if(d.account === 'Axis') actAxis += d.diff;
+            const summaryGrid = document.getElementById('txn-accounts-summary');
+            summaryGrid.innerHTML = '';
+
+            settingsData.accounts.forEach((acc, i) => {
+                const liveBal = acc.initBal + (diffMap[acc.name] || 0);
+                const outBal = outMap[acc.name] || 0;
+                const bCol = borderColors[i % borderColors.length];
+
+                summaryGrid.innerHTML += `
+                    <div class="glass p-2 md:p-3 rounded-xl border-t-2 ${bCol} text-center md:text-left">
+                        <p class="text-[9px] md:text-xs text-gray-400 uppercase tracking-wider mb-1">${acc.name}</p>
+                        <h4 class="text-xs md:text-lg font-bold text-white truncate">₹${liveBal.toLocaleString('en-IN')}</h4>
+                        <p class="text-[9px] md:text-xs text-red-400 mt-0.5 truncate">Out: ₹${outBal.toLocaleString('en-IN')}</p>
+                    </div>
+                `;
             });
-
-            let outUBI = 0, outHDFC = 0, outAxis = 0;
-            monthlyOut.forEach(d => {
-                if(d.account === 'UBI') outUBI = d.out;
-                if(d.account === 'HDFC') outHDFC = d.out;
-                if(d.account === 'Axis') outAxis = d.out;
-            });
-
-            document.getElementById('txn-ubi-bal').innerText = '₹' + actUBI.toLocaleString('en-IN');
-            document.getElementById('txn-hdfc-bal').innerText = '₹' + actHDFC.toLocaleString('en-IN');
-            document.getElementById('txn-axis-bal').innerText = '₹' + actAxis.toLocaleString('en-IN');
-
-            document.getElementById('txn-ubi-exp').innerText = 'Out: ₹' + outUBI.toLocaleString('en-IN');
-            document.getElementById('txn-hdfc-exp').innerText = 'Out: ₹' + outHDFC.toLocaleString('en-IN');
-            document.getElementById('txn-axis-exp').innerText = 'Out: ₹' + outAxis.toLocaleString('en-IN');
         }
 
         async function renderTransactionsTable() {
