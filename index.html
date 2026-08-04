@@ -91,15 +91,19 @@
     <div id="loading-overlay" class="fixed inset-0 bg-[#0f172a] z-[100] flex flex-col items-center justify-center">
         <div class="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
         <h2 class="text-xl font-bold">Loading VaultPro Engine...</h2>
+        <p class="text-sm text-gray-400 mt-2 font-mono">v2.0.0</p>
     </div>
 
     <!-- DESKTOP Sidebar Navigation -->
     <aside class="hidden md:flex w-64 glass h-full flex-col p-6 z-10">
         <div class="flex items-center gap-3 mb-10">
-            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-xl font-bold shadow-lg">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-xl font-bold shadow-lg shrink-0">
                 <i class="fa-solid fa-database text-white"></i>
             </div>
-            <h1 class="text-xl font-bold tracking-wider">Vault<span class="text-primary">Pro</span></h1>
+            <div class="flex flex-col">
+                <h1 class="text-xl font-bold tracking-wider leading-tight">Vault<span class="text-primary">Pro</span></h1>
+                <span class="text-[10px] text-gray-400 font-mono tracking-widest mt-0.5">v2.0.0</span>
+            </div>
         </div>
 
         <nav class="flex flex-col gap-2 flex-1">
@@ -133,10 +137,13 @@
         <!-- MOBILE Header -->
         <div class="md:hidden flex justify-between items-center mb-4 px-2">
             <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-sm font-bold shadow-lg">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-sm font-bold shadow-lg shrink-0">
                     <i class="fa-solid fa-database text-white"></i>
                 </div>
-                <h1 class="text-lg font-bold tracking-wider">Vault<span class="text-primary">Pro</span></h1>
+                <div class="flex flex-col">
+                    <h1 class="text-lg font-bold tracking-wider leading-tight">Vault<span class="text-primary">Pro</span></h1>
+                    <span class="text-[9px] text-gray-400 font-mono tracking-widest mt-0.5">v2.0.0</span>
+                </div>
             </div>
             <div class="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center gap-2">
                 <i class="fa-solid fa-server"></i> OPFS
@@ -393,6 +400,12 @@
                         <p class="text-[10px] text-gray-400 mt-2 text-center">Use this to migrate your old VaultPro data to the new OPFS DuckDB system.</p>
                     </div>
                 </div>
+                
+                <!-- VERSION INFO -->
+                <div class="mt-8 border-t border-gray-700/50 pt-6 text-center text-gray-500">
+                    <p class="text-sm font-bold tracking-wider mb-1">Vault<span class="text-primary">Pro</span></p>
+                    <p class="text-xs font-mono">Version 2.0.0</p>
+                </div>
 
             </div>
         </div>
@@ -491,8 +504,6 @@
                 const conn = await window.db.connect();
                 
                 // Initialize the OPFS (Origin Private File System)
-                // This connects DuckDB directly to the browser's native file system
-                // ensuring there are no asynchronous "saving" race conditions.
                 await db.open({
                     path: 'opfs://vaultpro.db',
                     accessMode: duckdb.DuckDBAccessMode.READ_WRITE,
@@ -524,12 +535,9 @@
                         const req = tx.objectStore('store').get('duckdb_backup');
                         req.onsuccess = async () => {
                             if (req.result) {
-                                // We found old data. Let's migrate it to OPFS.
                                 await window.db.registerFileBuffer('legacy_backup.parquet', new Uint8Array(req.result));
-                                // We use INSERT OR IGNORE so we don't duplicate if OPFS already has it
                                 await conn.query(`INSERT OR IGNORE INTO transactions SELECT * FROM read_parquet('legacy_backup.parquet');`);
                                 
-                                // Delete the old IndexedDB backup so we don't migrate again
                                 const delTx = oldIdb.transaction('store', 'readwrite');
                                 delTx.objectStore('store').delete('duckdb_backup');
                             }
@@ -575,7 +583,6 @@
         window.exportDataCSV = async function() {
             try {
                 const conn = await window.db.connect();
-                // Overwrite the export file if it exists
                 await conn.query(`COPY transactions TO 'export.csv' (HEADER, DELIMITER ',');`);
                 const buffer = await window.db.copyFileToBuffer('export.csv');
                 await conn.close();
