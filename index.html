@@ -55,6 +55,18 @@
         .input-glass:focus { outline: none; border-color: #6366f1; background: rgba(255,255,255,0.1); }
         .input-glass option { color: #0f172a; }
         
+        /* Hide native date picker icon in WebKit for cleaner UI since we have a clear button */
+        input[type="date"]::-webkit-inner-spin-button,
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            opacity: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
         .badge-pill {
             background: rgba(99, 102, 241, 0.15);
             border: 1px solid rgba(99, 102, 241, 0.3);
@@ -78,7 +90,7 @@
     <!-- Loading Overlay for DuckDB -->
     <div id="loading-overlay" class="fixed inset-0 bg-[#0f172a] z-[100] flex flex-col items-center justify-center">
         <div class="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-        <h2 class="text-xl font-bold">Initializing DuckDB Engine...</h2>
+        <h2 class="text-xl font-bold">Loading Database...</h2>
     </div>
 
     <!-- DESKTOP Sidebar Navigation -->
@@ -260,9 +272,14 @@
                 <!-- Dynamically populated -->
             </div>
 
-            <div class="flex justify-end mb-4">
-                <div class="relative">
-                    <select id="txn-account-filter" class="input-glass rounded-lg px-4 py-2 pr-8 text-xs md:text-sm appearance-none outline-none cursor-pointer" onchange="refreshTxnViews()">
+            <!-- Enhanced Filters (Date & Account) -->
+            <div class="flex flex-col md:flex-row justify-end gap-3 mb-4">
+                <div class="relative w-full md:w-auto flex items-center">
+                    <input type="date" id="txn-date-filter" class="w-full input-glass rounded-lg pl-4 pr-10 py-2 text-xs md:text-sm appearance-none outline-none cursor-pointer" onchange="refreshTxnViews()" title="Filter by specific date">
+                    <button onclick="clearDateFilter()" id="clear-date-btn" class="absolute right-3 top-2 text-gray-400 hover:text-white hidden transition-colors z-10"><i class="fa-solid fa-circle-xmark text-sm mt-0.5"></i></button>
+                </div>
+                <div class="relative w-full md:w-auto">
+                    <select id="txn-account-filter" class="w-full input-glass rounded-lg px-4 py-2 pr-8 text-xs md:text-sm appearance-none outline-none cursor-pointer" onchange="refreshTxnViews()">
                         <option value="all">All Accounts Filter</option>
                         <!-- Dynamically populated -->
                     </select>
@@ -272,7 +289,7 @@
 
             <!-- TABLE VIEW -->
             <div id="view-table" class="glass rounded-2xl flex flex-col h-[48vh] overflow-hidden">
-                <div class="overflow-y-auto p-3 md:p-5 space-y-3" id="transactions-list"></div>
+                <div class="overflow-y-auto p-3 md:p-5 pb-10" id="transactions-list"></div>
             </div>
 
             <!-- GRAPH VIEW -->
@@ -404,12 +421,11 @@
     </nav>
 
     <script>
-        // Color palette for dynamic accounts
         const borderColors = ['border-blue-500', 'border-red-500', 'border-pink-500', 'border-emerald-500', 'border-purple-500', 'border-orange-500'];
         const textColors = ['text-blue-500/20', 'text-red-500/20', 'text-pink-500/20', 'text-emerald-500/20', 'text-purple-500/20', 'text-orange-500/20'];
 
         // ==========================================
-        // LOCAL SETTINGS MANAGEMENT & MIGRATION
+        // LOCAL SETTINGS MANAGEMENT
         // ==========================================
         const defaultCategories = ["Groceries", "Rent/Mortgage", "Utilities", "Transportation", "Dining Out", "Entertainment", "Healthcare", "Salary", "Investments", "Miscellaneous"];
         const defaultPaymentMethods = ["UPI", "Credit Card", "Debit Card", "Cash", "Net Banking"];
@@ -426,7 +442,6 @@
         if (savedSettings) {
             try { 
                 let parsed = JSON.parse(savedSettings); 
-                // Backward compatibility migration from initialAccounts -> accounts array
                 if (parsed.initialAccounts) {
                     parsed.accounts = [];
                     for (const [key, val] of Object.entries(parsed.initialAccounts)) {
@@ -448,10 +463,17 @@
         document.getElementById('global-month').value = currentGlobalMonth;
         document.getElementById('date').value = new Date().toISOString().split('T')[0];
 
+        // Format Date Helper
+        function formatDateStr(dateStr) {
+            const dateObj = new Date(dateStr);
+            if (isNaN(dateObj)) return dateStr;
+            return dateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
         // ==========================================
-        // DUCKDB WASM INITIALIZATION
+        // STRICT PROMISE-BASED INDEXEDDB WRAPPERS
         // ==========================================
-        async function getIndexedDB() {
+        function getIndexedDB() {
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open('VaultProDB', 1);
                 request.onupgradeneeded = e => { e.target.result.createObjectStore('store'); };
@@ -460,6 +482,29 @@
             });
         }
 
+        async function saveToIndexedDB(key, data) {
+            const db = await getIndexedDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction('store', 'readwrite');
+                tx.objectStore('store').put(data, key);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        async function loadFromIndexedDB(key) {
+            const db = await getIndexedDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction('store', 'readonly');
+                const req = tx.objectStore('store').get(key);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        // ==========================================
+        // DUCKDB WASM INITIALIZATION
+        // ==========================================
         async function initDuckDB() {
             try {
                 const duckdb = await import("https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.32.0/+esm");
@@ -489,23 +534,27 @@
                     );
                 `);
                 
-                const idb = await getIndexedDB();
-                const tx = idb.transaction('store', 'readonly');
-                const req = tx.objectStore('store').get('duckdb_backup');
-                
-                req.onsuccess = async () => {
-                    if (req.result) {
-                        await window.db.registerFileBuffer('backup.parquet', req.result);
+                // Strictly wait for the load from IndexedDB
+                try {
+                    const backupData = await loadFromIndexedDB('duckdb_backup');
+                    if (backupData) {
+                        await window.db.registerFileBuffer('backup.parquet', new Uint8Array(backupData));
                         await conn.query(`INSERT INTO transactions SELECT * FROM read_parquet('backup.parquet');`);
                     }
-                    await conn.close();
-                    document.getElementById('loading-overlay').style.opacity = '0';
-                    setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 500);
-                    
-                    populateLists();
-                    updateDashboard();
-                    if(document.getElementById('transactions').classList.contains('active')) refreshTxnViews();
-                };
+                } catch(e) {
+                    console.error("No backup found or restore failed:", e);
+                }
+                
+                await conn.close();
+
+                // Unveil the UI
+                document.getElementById('loading-overlay').style.opacity = '0';
+                setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 500);
+                
+                populateLists();
+                updateDashboard();
+                if(document.getElementById('transactions').classList.contains('active')) refreshTxnViews();
+
             } catch (err) {
                 console.error("DuckDB Init Error:", err);
                 alert("Failed to initialize database engine.");
@@ -520,14 +569,17 @@
         }
 
         async function persistDB() {
-            const conn = await window.db.connect();
-            await conn.query(`COPY transactions TO 'backup.parquet' (FORMAT PARQUET);`);
-            const buffer = await window.db.copyFileToBuffer('backup.parquet');
-            await conn.close();
-
-            const idb = await getIndexedDB();
-            const tx = idb.transaction('store', 'readwrite');
-            tx.objectStore('store').put(buffer, 'duckdb_backup');
+            try {
+                const conn = await window.db.connect();
+                await conn.query(`COPY transactions TO 'backup.parquet' (FORMAT PARQUET);`);
+                const buffer = await window.db.copyFileToBuffer('backup.parquet');
+                await conn.close();
+                
+                // Strictly wait for data to write to storage before resolving
+                await saveToIndexedDB('duckdb_backup', buffer);
+            } catch (e) {
+                console.error("Persistence failed:", e);
+            }
         }
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -535,7 +587,7 @@
         });
 
         // ==========================================
-        // IMPORT / EXPORT (CSV & LEGACY JSON)
+        // IMPORT / EXPORT
         // ==========================================
         window.exportDataCSV = async function() {
             try {
@@ -640,10 +692,9 @@
         };
 
         // ==========================================
-        // UI POPULATION & DYNAMIC LISTS
+        // UI POPULATION & NAVIGATION
         // ==========================================
         function populateLists() {
-            // Dropdowns
             const accSelect = document.getElementById('account');
             const txnFilter = document.getElementById('txn-account-filter');
             accSelect.innerHTML = '';
@@ -662,12 +713,11 @@
             pmSelect.innerHTML = '';
             settingsData.paymentMethods.sort().forEach(pm => pmSelect.add(new Option(pm, pm)));
 
-            // Settings Lists (Accounts)
             const accList = document.getElementById('master-accounts-list');
             accList.innerHTML = '';
             settingsData.accounts.forEach((acc, i) => {
                 const div = document.createElement('div');
-                div.className = 'glass p-3 rounded-lg flex justify-between items-center';
+                div.className = 'glass p-3 rounded-lg flex justify-between items-center mb-2';
                 div.innerHTML = `
                     <div>
                         <p class="font-bold text-white text-sm">${acc.name}</p>
@@ -681,24 +731,22 @@
                 accList.appendChild(div);
             });
 
-            // Settings Lists (Categories)
             const catList = document.getElementById('master-categories-list');
             catList.innerHTML = '';
             settingsData.categories.forEach((cat, i) => {
                 const span = document.createElement('span');
-                span.className = 'badge-pill';
+                span.className = 'badge-pill mb-2';
                 span.innerHTML = `${cat} 
                     <button onclick="triggerEditCategory(${i})" class="ml-1 text-gray-400 hover:text-blue-400"><i class="fa-solid fa-pen text-[10px]"></i></button>
                     <button onclick="triggerDeleteCategory(${i})" class="ml-1 text-gray-400 hover:text-red-400"><i class="fa-solid fa-xmark text-[10px]"></i></button>`;
                 catList.appendChild(span);
             });
 
-            // Settings Lists (Payment Methods)
             const pmList = document.getElementById('master-payment-methods-list');
             pmList.innerHTML = '';
             settingsData.paymentMethods.forEach((pm, i) => {
                 const span = document.createElement('span');
-                span.className = 'badge-pill border-pink-500/30 bg-pink-500/10 text-pink-200';
+                span.className = 'badge-pill mb-2 border-pink-500/30 bg-pink-500/10 text-pink-200';
                 span.innerHTML = `${pm} 
                     <button onclick="triggerEditPM(${i})" class="ml-1 opacity-70 hover:opacity-100 hover:text-blue-400"><i class="fa-solid fa-pen text-[10px]"></i></button>
                     <button onclick="triggerDeletePM(${i})" class="ml-1 opacity-70 hover:opacity-100 hover:text-red-400"><i class="fa-solid fa-xmark text-[10px]"></i></button>`;
@@ -711,6 +759,11 @@
             currentGlobalMonth = val;
             updateDashboard();
             if(document.getElementById('transactions').classList.contains('active')) refreshTxnViews();
+        };
+
+        window.clearDateFilter = function() {
+            document.getElementById('txn-date-filter').value = '';
+            refreshTxnViews();
         };
 
         window.switchTab = function(tabId) {
@@ -735,6 +788,11 @@
         };
 
         window.refreshTxnViews = function() {
+            const df = document.getElementById('txn-date-filter').value;
+            const clrBtn = document.getElementById('clear-date-btn');
+            if(df) clrBtn.classList.remove('hidden');
+            else clrBtn.classList.add('hidden');
+
             renderTxnSummary();
             renderTransactionsTable();
             if(!document.getElementById('view-graph').classList.contains('hidden')) {
@@ -764,7 +822,7 @@
         };
 
         // ==========================================
-        // MASTER DATA CRUD (ACCOUNTS, CATS, PMS)
+        // MASTER DATA CRUD
         // ==========================================
         window.triggerEditAccount = async function(idx) {
             const acc = settingsData.accounts[idx];
@@ -834,7 +892,7 @@
         }
 
         // ==========================================
-        // SETTINGS FORMS SUBMISSIONS
+        // SETTINGS & INSERT FORM SUBMISSIONS
         // ==========================================
         document.getElementById('account-form').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -842,9 +900,7 @@
             const bal = parseFloat(document.getElementById('new-account-bal').value) || 0;
             if(name && !settingsData.accounts.some(a => a.name.toLowerCase() === name.toLowerCase())) {
                 settingsData.accounts.push({name, initBal: bal});
-                saveSettings();
-                populateLists(); updateDashboard();
-                this.reset();
+                saveSettings(); populateLists(); updateDashboard(); this.reset();
             } else { alert("Account exists or invalid."); }
         });
 
@@ -882,9 +938,6 @@
             }, 1500);
         });
 
-        // ==========================================
-        // TRANSACTIONS CRUD
-        // ==========================================
         window.deleteTransaction = async function(id) {
             if (!confirm("Are you sure you want to delete this transaction?")) return;
             await queryDB(`DELETE FROM transactions WHERE id = ${id}`);
@@ -902,20 +955,17 @@
                 document.getElementById('amount').value = t.amount;
                 document.getElementById('account').value = t.account;
                 document.getElementById('category').value = t.category;
-                
                 if (t.paymentMethod) document.getElementById('payment-method').value = t.paymentMethod;
                 
                 document.getElementById('insert-title').innerText = 'Edit Record';
                 const btn = document.getElementById('save-btn');
                 btn.innerHTML = '<i class="fa-solid fa-pen mr-2"></i> Update Record';
-                
                 switchTab('insert');
             }
         };
 
         document.getElementById('transaction-form').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
             const amountVal = parseFloat(document.getElementById('amount').value);
             const accountVal = document.getElementById('account').value.replace(/'/g, "''");
             const typeVal = document.getElementById('type').value.replace(/'/g, "''");
@@ -957,11 +1007,10 @@
         });
 
         // ==========================================
-        // DUCKDB SQL RENDER ENGINES
+        // RENDER ENGINES
         // ==========================================
         async function updateDashboard() {
             if(!window.db) return;
-            
             const todayStr = new Date().toISOString().split('T')[0];
             const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
             const yesterdayStr = yesterday.toISOString().split('T')[0];
@@ -982,10 +1031,8 @@
             const s = stats[0] || { today_spend: 0, yesterday_spend: 0, month_spend: 0 };
             const remainingBudget = (settingsData.monthlyBudget || 0) - (s.month_spend || 0);
 
-            // Compute Live Balances mapped dynamically
             let totalBal = 0;
-            const diffMap = {};
-            diffs.forEach(d => diffMap[d.account] = d.diff);
+            const diffMap = {}; diffs.forEach(d => diffMap[d.account] = d.diff);
 
             const dashGrid = document.getElementById('dashboard-accounts-grid');
             dashGrid.innerHTML = '';
@@ -993,7 +1040,6 @@
             settingsData.accounts.forEach((acc, i) => {
                 const liveBal = acc.initBal + (diffMap[acc.name] || 0);
                 totalBal += liveBal;
-
                 const bCol = borderColors[i % borderColors.length];
                 const tCol = textColors[i % textColors.length];
 
@@ -1021,7 +1067,6 @@
                 SELECT account, SUM(CASE WHEN type='income' THEN amount ELSE -amount END) as diff
                 FROM transactions GROUP BY account
             `);
-            
             const monthlyOut = await queryDB(`
                 SELECT account, SUM(amount) as out
                 FROM transactions WHERE type='expense' AND txn_date LIKE '${currentGlobalMonth}%' GROUP BY account
@@ -1053,10 +1098,13 @@
             list.innerHTML = '';
             
             const accountFilter = document.getElementById('txn-account-filter').value;
-            let query = `SELECT * FROM transactions WHERE txn_date LIKE '${currentGlobalMonth}%'`;
-            if (accountFilter !== 'all') {
-                query += ` AND account = '${accountFilter}'`;
-            }
+            const dateFilter = document.getElementById('txn-date-filter').value;
+
+            let query = `SELECT * FROM transactions WHERE 1=1`;
+            if (dateFilter) query += ` AND txn_date = '${dateFilter}'`;
+            else query += ` AND txn_date LIKE '${currentGlobalMonth}%'`;
+            
+            if (accountFilter !== 'all') query += ` AND account = '${accountFilter}'`;
             query += ` ORDER BY txn_date DESC, id DESC`;
 
             const txns = await queryDB(query);
@@ -1066,18 +1114,26 @@
                 return;
             }
 
+            let lastDate = null;
             txns.forEach(t => {
+                if (t.txn_date !== lastDate) {
+                    const dateHeader = document.createElement('div');
+                    dateHeader.className = 'text-[10px] md:text-xs font-bold text-gray-400 mt-4 mb-2 uppercase tracking-wider flex items-center gap-2 border-b border-gray-700/50 pb-1';
+                    dateHeader.innerHTML = `<i class="fa-regular fa-calendar text-primary"></i> ${formatDateStr(t.txn_date)}`;
+                    list.appendChild(dateHeader);
+                    lastDate = t.txn_date;
+                }
+
                 const isExp = t.type === 'expense';
                 const sign = isExp ? '-' : '+';
                 const color = isExp ? 'text-red-400' : 'text-emerald-400';
                 const icon = isExp ? 'fa-arrow-down' : 'fa-arrow-up';
                 const bg = isExp ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20';
                 const iconBg = isExp ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400';
-                
                 const pmText = t.paymentMethod ? ` • ${t.paymentMethod}` : '';
 
                 const card = document.createElement('div');
-                card.className = `flex justify-between items-center p-3 md:p-4 rounded-xl border ${bg}`;
+                card.className = `flex justify-between items-center p-3 md:p-4 rounded-xl border ${bg} mb-3`;
                 card.innerHTML = `
                     <div class="flex items-center gap-3 md:gap-4">
                         <div class="w-10 h-10 rounded-full flex items-center justify-center ${iconBg}">
@@ -1085,7 +1141,7 @@
                         </div>
                         <div>
                             <p class="font-bold text-sm md:text-base">${t.category}</p>
-                            <p class="text-[10px] md:text-xs text-gray-400">${t.txn_date} • ${t.account}${pmText}</p>
+                            <p class="text-[10px] md:text-xs text-gray-400">${t.account}${pmText}</p>
                         </div>
                     </div>
                     <div class="flex flex-col items-end gap-1 md:gap-2">
@@ -1104,25 +1160,22 @@
         async function renderAnalytics() {
             const ctx = document.getElementById('expenseChart').getContext('2d');
             const accountFilter = document.getElementById('txn-account-filter').value;
+            const dateFilter = document.getElementById('txn-date-filter').value;
             
-            let query = `
-                SELECT category, SUM(amount) as total 
-                FROM transactions 
-                WHERE type='expense' AND txn_date LIKE '${currentGlobalMonth}%'
-            `;
+            let query = `SELECT category, SUM(amount) as total FROM transactions WHERE type='expense'`;
+            
+            if (dateFilter) query += ` AND txn_date = '${dateFilter}'`;
+            else query += ` AND txn_date LIKE '${currentGlobalMonth}%'`;
+            
             if (accountFilter !== 'all') query += ` AND account = '${accountFilter}'`;
             query += ` GROUP BY category`;
 
             const catData = await queryDB(query);
-            
             if (chartInstance) chartInstance.destroy();
             
-            Chart.defaults.color = '#94a3b8'; 
-            Chart.defaults.font.family = 'Outfit';
-            
+            Chart.defaults.color = '#94a3b8'; Chart.defaults.font.family = 'Outfit';
             const labels = catData.length ? catData.map(r => r.category) : ['No Data'];
             const values = catData.length ? catData.map(r => r.total) : [1];
-
             const vibrantColors = ['#6366f1', '#ec4899', '#14b8a6', '#f59e0b', '#8b5cf6', '#ef4444', '#10b981', '#3b82f6', '#f43f5e', '#84cc16'];
             const displayColors = catData.length ? vibrantColors : ['#334155'];
 
