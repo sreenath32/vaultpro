@@ -91,7 +91,7 @@
     <div id="loading-overlay" class="fixed inset-0 bg-[#0f172a] z-[100] flex flex-col items-center justify-center">
         <div class="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
         <h2 class="text-xl font-bold" id="loading-text">Loading VaultPro Engine...</h2>
-        <p class="text-sm text-gray-400 mt-2 font-mono">v2.0.3 (File Fix)</p>
+        <p class="text-sm text-gray-400 mt-2 font-mono">v2.0.4 (Data Fix)</p>
     </div>
 
     <!-- DESKTOP Sidebar Navigation -->
@@ -102,7 +102,7 @@
             </div>
             <div class="flex flex-col">
                 <h1 class="text-xl font-bold tracking-wider leading-tight">Vault<span class="text-primary">Pro</span></h1>
-                <span class="text-[10px] text-gray-400 font-mono tracking-widest mt-0.5">v2.0.3</span>
+                <span class="text-[10px] text-gray-400 font-mono tracking-widest mt-0.5">v2.0.4</span>
             </div>
         </div>
 
@@ -142,7 +142,7 @@
                 </div>
                 <div class="flex flex-col">
                     <h1 class="text-lg font-bold tracking-wider leading-tight">Vault<span class="text-primary">Pro</span></h1>
-                    <span class="text-[9px] text-gray-400 font-mono tracking-widest mt-0.5">v2.0.3</span>
+                    <span class="text-[9px] text-gray-400 font-mono tracking-widest mt-0.5">v2.0.4</span>
                 </div>
             </div>
             <div class="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center gap-2">
@@ -385,7 +385,6 @@
                             <i class="fa-solid fa-download"></i> Export to CSV
                         </button>
                         
-                        <!-- MOBILE FIX: absolute positioning instead of 'hidden' to prevent iOS/Android from blocking the file picker -->
                         <div class="flex-1 relative overflow-hidden">
                             <input type="file" id="csv-import-input" accept=".csv, text/csv, application/vnd.ms-excel" class="absolute w-0 h-0 opacity-0" onchange="importDataCSV(event)">
                             <button onclick="document.getElementById('csv-import-input').click()" class="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:opacity-90 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform flex justify-center items-center gap-2">
@@ -407,7 +406,7 @@
                 <!-- VERSION INFO -->
                 <div class="mt-8 border-t border-gray-700/50 pt-6 text-center text-gray-500">
                     <p class="text-sm font-bold tracking-wider mb-1">Vault<span class="text-primary">Pro</span></p>
-                    <p class="text-xs font-mono">Version 2.0.3 (File Fix)</p>
+                    <p class="text-xs font-mono">Version 2.0.4 (Data Fix)</p>
                 </div>
 
             </div>
@@ -437,6 +436,12 @@
     </nav>
 
     <script>
+        // ==========================================
+        // DUCKDB BIGINT SERIALIZATION FIX
+        // ==========================================
+        // Teaches JSON.stringify how to safely parse DuckDB's BIGINT IDs back into localStorage.
+        BigInt.prototype.toJSON = function() { return Number(this); };
+
         const borderColors = ['border-blue-500', 'border-red-500', 'border-pink-500', 'border-emerald-500', 'border-purple-500', 'border-orange-500'];
         const textColors = ['text-blue-500/20', 'text-red-500/20', 'text-pink-500/20', 'text-emerald-500/20', 'text-purple-500/20', 'text-orange-500/20'];
 
@@ -598,7 +603,6 @@
                 await window.db.registerFileBuffer('import.csv', buffer);
                 
                 const conn = await window.db.connect();
-                // ON CONFLICT prevents crashes if the CSV contains rows we already have
                 await conn.query(`INSERT INTO transactions SELECT * FROM read_csv_auto('import.csv') ON CONFLICT (id) DO NOTHING;`);
                 await conn.close();
                 
