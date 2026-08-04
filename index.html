@@ -91,7 +91,7 @@
     <div id="loading-overlay" class="fixed inset-0 bg-[#0f172a] z-[100] flex flex-col items-center justify-center">
         <div class="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
         <h2 class="text-xl font-bold" id="loading-text">Loading VaultPro Engine...</h2>
-        <p class="text-sm text-gray-400 mt-2 font-mono">v2.0.2 (Sync-Safe)</p>
+        <p class="text-sm text-gray-400 mt-2 font-mono">v2.0.3 (File Fix)</p>
     </div>
 
     <!-- DESKTOP Sidebar Navigation -->
@@ -102,7 +102,7 @@
             </div>
             <div class="flex flex-col">
                 <h1 class="text-xl font-bold tracking-wider leading-tight">Vault<span class="text-primary">Pro</span></h1>
-                <span class="text-[10px] text-gray-400 font-mono tracking-widest mt-0.5">v2.0.2</span>
+                <span class="text-[10px] text-gray-400 font-mono tracking-widest mt-0.5">v2.0.3</span>
             </div>
         </div>
 
@@ -142,7 +142,7 @@
                 </div>
                 <div class="flex flex-col">
                     <h1 class="text-lg font-bold tracking-wider leading-tight">Vault<span class="text-primary">Pro</span></h1>
-                    <span class="text-[9px] text-gray-400 font-mono tracking-widest mt-0.5">v2.0.2</span>
+                    <span class="text-[9px] text-gray-400 font-mono tracking-widest mt-0.5">v2.0.3</span>
                 </div>
             </div>
             <div class="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center gap-2">
@@ -384,16 +384,19 @@
                         <button onclick="exportDataCSV()" class="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:opacity-90 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform flex justify-center items-center gap-2">
                             <i class="fa-solid fa-download"></i> Export to CSV
                         </button>
-                        <div class="flex-1 relative">
-                            <input type="file" id="csv-import-input" accept=".csv" class="hidden" onchange="importDataCSV(event)">
+                        
+                        <!-- MOBILE FIX: absolute positioning instead of 'hidden' to prevent iOS/Android from blocking the file picker -->
+                        <div class="flex-1 relative overflow-hidden">
+                            <input type="file" id="csv-import-input" accept=".csv, text/csv, application/vnd.ms-excel" class="absolute w-0 h-0 opacity-0" onchange="importDataCSV(event)">
                             <button onclick="document.getElementById('csv-import-input').click()" class="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:opacity-90 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform flex justify-center items-center gap-2">
                                 <i class="fa-solid fa-upload"></i> Import CSV
                             </button>
                         </div>
                     </div>
+                    
                     <!-- Legacy JSON Import -->
-                    <div class="relative">
-                        <input type="file" id="legacy-import-input" accept=".json" class="hidden" onchange="importLegacyJSON(event)">
+                    <div class="relative overflow-hidden">
+                        <input type="file" id="legacy-import-input" accept=".json, application/json" class="absolute w-0 h-0 opacity-0" onchange="importLegacyJSON(event)">
                         <button onclick="document.getElementById('legacy-import-input').click()" class="w-full bg-gradient-to-r from-yellow-500 to-orange-600 hover:opacity-90 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform flex justify-center items-center gap-2">
                             <i class="fa-solid fa-file-code"></i> Import Legacy JSON Data
                         </button>
@@ -404,7 +407,7 @@
                 <!-- VERSION INFO -->
                 <div class="mt-8 border-t border-gray-700/50 pt-6 text-center text-gray-500">
                     <p class="text-sm font-bold tracking-wider mb-1">Vault<span class="text-primary">Pro</span></p>
-                    <p class="text-xs font-mono">Version 2.0.2 (Sync-Safe)</p>
+                    <p class="text-xs font-mono">Version 2.0.3 (File Fix)</p>
                 </div>
 
             </div>
@@ -440,8 +443,6 @@
         // ==========================================
         // HYBRID STORAGE STATE
         // ==========================================
-        // localStorage is 100% synchronous and crash-proof. 
-        // We use it as the source of truth, and mirror it to DuckDB for fast querying.
         const defaultCategories = ["Groceries", "Rent/Mortgage", "Utilities", "Transportation", "Dining Out", "Entertainment", "Healthcare", "Salary", "Investments", "Miscellaneous"];
         const defaultPaymentMethods = ["UPI", "Credit Card", "Debit Card", "Cash", "Net Banking"];
         const defaultAccounts = [{name: 'UBI', initBal: 0}, {name: 'HDFC', initBal: 0}, {name: 'Axis', initBal: 0}];
@@ -453,7 +454,6 @@
             paymentMethods: [...defaultPaymentMethods]
         };
 
-        // Load Settings
         const savedSettings = localStorage.getItem('vaultpro_settings');
         if (savedSettings) {
             try { 
@@ -469,7 +469,6 @@
             } catch(e){}
         }
 
-        // Load Transactions (Synchronous Source of Truth)
         let localTxns = [];
         try {
             localTxns = JSON.parse(localStorage.getItem('vaultpro_txns') || '[]');
@@ -480,11 +479,9 @@
         }
 
         function saveTxnsToDisk() {
-            // Synchronous save. Impossible for OS to interrupt.
             localStorage.setItem('vaultpro_txns', JSON.stringify(localTxns));
         }
 
-        // Global State
         let currentGlobalMonth = new Date().toISOString().slice(0, 7);
         let editingTransactionId = null; 
         document.getElementById('global-month').value = currentGlobalMonth;
@@ -528,7 +525,6 @@
                     );
                 `);
                 
-                // Hydrate DuckDB from our Synchronous localStorage
                 if (localTxns.length > 0) {
                     const txnsJsonStr = JSON.stringify(localTxns);
                     const buffer = new TextEncoder().encode(txnsJsonStr);
@@ -537,6 +533,7 @@
                         INSERT INTO transactions
                         SELECT CAST(id AS BIGINT), type, CAST(amount AS DOUBLE), account, category, paymentMethod, txn_date
                         FROM read_json_auto('boot.json')
+                        ON CONFLICT (id) DO NOTHING;
                     `);
                 }
 
@@ -567,7 +564,7 @@
         });
 
         // ==========================================
-        // IMPORT / EXPORT
+        // IMPORT / EXPORT (WITH FILE FIX)
         // ==========================================
         window.exportDataCSV = async function() {
             try {
@@ -590,15 +587,21 @@
         window.importDataCSV = async function(event) {
             const file = event.target.files[0];
             if (!file) return;
+
+            const loader = document.getElementById('loading-overlay');
+            document.getElementById('loading-text').innerText = "Importing CSV...";
+            loader.style.display = 'flex';
+            loader.style.opacity = '1';
+
             try {
                 const buffer = new Uint8Array(await file.arrayBuffer());
                 await window.db.registerFileBuffer('import.csv', buffer);
                 
                 const conn = await window.db.connect();
-                await conn.query(`INSERT INTO transactions SELECT * FROM read_csv_auto('import.csv');`);
+                // ON CONFLICT prevents crashes if the CSV contains rows we already have
+                await conn.query(`INSERT INTO transactions SELECT * FROM read_csv_auto('import.csv') ON CONFLICT (id) DO NOTHING;`);
                 await conn.close();
                 
-                // Sync back to local storage
                 localTxns = await queryDB(`SELECT * FROM transactions`);
                 saveTxnsToDisk();
 
@@ -606,16 +609,25 @@
                 if(document.getElementById('transactions').classList.contains('active')) refreshTxnViews();
                 
                 alert("Data imported successfully!");
-                event.target.value = ''; 
             } catch(err) {
                 console.error(err);
-                alert("Import failed. Ensure the CSV format matches VaultPro's schema.");
+                alert("Import failed. Ensure the CSV format matches VaultPro's schema. Details: " + err.message);
+            } finally {
+                event.target.value = ''; 
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.display = 'none', 500);
             }
         };
 
         window.importLegacyJSON = async function(event) {
             const file = event.target.files[0];
             if (!file) return;
+
+            const loader = document.getElementById('loading-overlay');
+            document.getElementById('loading-text').innerText = "Importing JSON...";
+            loader.style.display = 'flex';
+            loader.style.opacity = '1';
+
             try {
                 const text = await file.text();
                 const legacyData = JSON.parse(text);
@@ -643,48 +655,44 @@
                 saveSettings();
 
                 if (legacyData.transactions && legacyData.transactions.length > 0) {
-                    // Map legacy 'date' to 'txn_date' for DuckDB compatibility
                     const mappedTxns = legacyData.transactions.map(t => ({
-                        id: Number(t.id),
-                        type: t.type,
-                        amount: Number(t.amount),
-                        account: t.account,
-                        category: t.category,
-                        paymentMethod: t.paymentMethod,
+                        id: Number(t.id), type: t.type, amount: Number(t.amount),
+                        account: t.account, category: t.category, paymentMethod: t.paymentMethod,
                         txn_date: t.date 
                     }));
 
-                    localTxns = mappedTxns;
-                    saveTxnsToDisk();
-
-                    const txnsJsonStr = JSON.stringify(localTxns);
+                    const txnsJsonStr = JSON.stringify(mappedTxns);
                     const buffer = new TextEncoder().encode(txnsJsonStr);
                     await window.db.registerFileBuffer('legacy.json', buffer);
 
                     const conn = await window.db.connect();
-                    await conn.query(`DELETE FROM transactions`); // clear to prevent duplicates
                     await conn.query(`
                         INSERT INTO transactions
                         SELECT CAST(id AS BIGINT), type, CAST(amount AS DOUBLE), account, category, paymentMethod, txn_date
                         FROM read_json_auto('legacy.json')
+                        ON CONFLICT (id) DO NOTHING;
                     `);
                     await conn.close();
+
+                    localTxns = await queryDB(`SELECT * FROM transactions`);
+                    saveTxnsToDisk();
                 }
 
-                populateLists();
-                updateDashboard();
+                populateLists(); updateDashboard();
                 if(document.getElementById('transactions').classList.contains('active')) refreshTxnViews();
-
-                alert("Legacy JSON imported successfully!");
-                event.target.value = ''; 
 
                 if(document.getElementById('settings').classList.contains('active')){
                     document.getElementById('monthly-budget-input').value = settingsData.monthlyBudget || 0;
                 }
+                alert("Legacy JSON imported successfully!");
 
             } catch (err) {
                 console.error("Migration Error:", err);
-                alert("Import failed. Are you sure this is the old VaultPro JSON file?");
+                alert("Import failed. Details: " + err.message);
+            } finally {
+                event.target.value = ''; 
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.display = 'none', 500);
             }
         };
 
@@ -833,10 +841,8 @@
             saveSettings();
 
             if(newName.trim() !== oldName) {
-                // Update raw storage first
                 localTxns.forEach(t => { if(t.account === oldName) t.account = newName.trim(); });
                 saveTxnsToDisk();
-                
                 await queryDB(`UPDATE transactions SET account='${newName.trim().replace(/'/g, "''")}' WHERE account='${oldName.replace(/'/g, "''")}'`);
             }
             populateLists(); updateDashboard();
@@ -848,7 +854,6 @@
                 settingsData.accounts.splice(idx, 1);
                 saveSettings();
                 
-                // Update raw storage first
                 localTxns = localTxns.filter(t => t.account !== acc.name);
                 saveTxnsToDisk();
 
@@ -951,7 +956,6 @@
         window.deleteTransaction = async function(id) {
             if (!confirm("Are you sure you want to delete this transaction?")) return;
             
-            // Sync Save FIRST
             localTxns = localTxns.filter(t => t.id !== id);
             saveTxnsToDisk();
 
@@ -999,7 +1003,6 @@
             };
 
             if (editingTransactionId) {
-                // Sync Save FIRST
                 const index = localTxns.findIndex(t => t.id === editingTransactionId);
                 if(index > -1) localTxns[index] = newTxn;
                 saveTxnsToDisk();
@@ -1011,7 +1014,6 @@
                     WHERE id=${editingTransactionId}
                 `);
             } else {
-                // Sync Save FIRST
                 localTxns.push(newTxn);
                 saveTxnsToDisk();
 
