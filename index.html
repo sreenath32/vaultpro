@@ -91,18 +91,18 @@
     <div id="loading-overlay" class="fixed inset-0 bg-[#0f172a] z-[100] flex flex-col items-center justify-center">
         <div class="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
         <h2 class="text-xl font-bold" id="loading-text">Loading VaultPro Engine...</h2>
-        <p class="text-sm text-gray-400 mt-2 font-mono">v2.0.1 (Fail-Safe)</p>
+        <p class="text-sm text-gray-400 mt-2 font-mono">v2.0.2 (Sync-Safe)</p>
     </div>
 
     <!-- DESKTOP Sidebar Navigation -->
     <aside class="hidden md:flex w-64 glass h-full flex-col p-6 z-10">
         <div class="flex items-center gap-3 mb-10">
             <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-xl font-bold shadow-lg shrink-0">
-                <i class="fa-solid fa-database text-white"></i>
+                <i class="fa-solid fa-chart-line text-white"></i>
             </div>
             <div class="flex flex-col">
                 <h1 class="text-xl font-bold tracking-wider leading-tight">Vault<span class="text-primary">Pro</span></h1>
-                <span class="text-[10px] text-gray-400 font-mono tracking-widest mt-0.5">v2.0.1</span>
+                <span class="text-[10px] text-gray-400 font-mono tracking-widest mt-0.5">v2.0.2</span>
             </div>
         </div>
 
@@ -123,7 +123,7 @@
 
         <div class="pt-4 border-t border-gray-700/50">
             <div class="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-left text-sm font-semibold cursor-default">
-                <span class="flex items-center gap-2"><i class="fa-solid fa-server"></i> Storage Active</span>
+                <span class="flex items-center gap-2"><i class="fa-solid fa-shield-halved"></i> Sync-Safe</span>
                 <i class="fa-solid fa-check-circle text-xs opacity-70"></i>
             </div>
         </div>
@@ -138,15 +138,15 @@
         <div class="md:hidden flex justify-between items-center mb-4 px-2">
             <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-sm font-bold shadow-lg shrink-0">
-                    <i class="fa-solid fa-database text-white"></i>
+                    <i class="fa-solid fa-chart-line text-white"></i>
                 </div>
                 <div class="flex flex-col">
                     <h1 class="text-lg font-bold tracking-wider leading-tight">Vault<span class="text-primary">Pro</span></h1>
-                    <span class="text-[9px] text-gray-400 font-mono tracking-widest mt-0.5">v2.0.1</span>
+                    <span class="text-[9px] text-gray-400 font-mono tracking-widest mt-0.5">v2.0.2</span>
                 </div>
             </div>
             <div class="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center gap-2">
-                <i class="fa-solid fa-server"></i> Sync
+                <i class="fa-solid fa-shield-halved"></i> Safe
             </div>
         </div>
 
@@ -379,7 +379,7 @@
                 
                 <!-- Data Management -->
                 <div class="border-t border-gray-700/50 pt-6">
-                    <h3 class="text-lg md:text-xl font-semibold mb-4 text-white">Data Management (Database)</h3>
+                    <h3 class="text-lg md:text-xl font-semibold mb-4 text-white">Data Management</h3>
                     <div class="flex flex-col md:flex-row gap-4 mb-4">
                         <button onclick="exportDataCSV()" class="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:opacity-90 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform flex justify-center items-center gap-2">
                             <i class="fa-solid fa-download"></i> Export to CSV
@@ -397,13 +397,14 @@
                         <button onclick="document.getElementById('legacy-import-input').click()" class="w-full bg-gradient-to-r from-yellow-500 to-orange-600 hover:opacity-90 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform flex justify-center items-center gap-2">
                             <i class="fa-solid fa-file-code"></i> Import Legacy JSON Data
                         </button>
+                        <p class="text-[10px] text-gray-400 mt-2 text-center">Migrate old VaultPro data securely.</p>
                     </div>
                 </div>
                 
                 <!-- VERSION INFO -->
                 <div class="mt-8 border-t border-gray-700/50 pt-6 text-center text-gray-500">
                     <p class="text-sm font-bold tracking-wider mb-1">Vault<span class="text-primary">Pro</span></p>
-                    <p class="text-xs font-mono">Version 2.0.1</p>
+                    <p class="text-xs font-mono">Version 2.0.2 (Sync-Safe)</p>
                 </div>
 
             </div>
@@ -437,8 +438,10 @@
         const textColors = ['text-blue-500/20', 'text-red-500/20', 'text-pink-500/20', 'text-emerald-500/20', 'text-purple-500/20', 'text-orange-500/20'];
 
         // ==========================================
-        // LOCAL SETTINGS MANAGEMENT
+        // HYBRID STORAGE STATE
         // ==========================================
+        // localStorage is 100% synchronous and crash-proof. 
+        // We use it as the source of truth, and mirror it to DuckDB for fast querying.
         const defaultCategories = ["Groceries", "Rent/Mortgage", "Utilities", "Transportation", "Dining Out", "Entertainment", "Healthcare", "Salary", "Investments", "Miscellaneous"];
         const defaultPaymentMethods = ["UPI", "Credit Card", "Debit Card", "Cash", "Net Banking"];
         const defaultAccounts = [{name: 'UBI', initBal: 0}, {name: 'HDFC', initBal: 0}, {name: 'Axis', initBal: 0}];
@@ -450,6 +453,7 @@
             paymentMethods: [...defaultPaymentMethods]
         };
 
+        // Load Settings
         const savedSettings = localStorage.getItem('vaultpro_settings');
         if (savedSettings) {
             try { 
@@ -465,8 +469,19 @@
             } catch(e){}
         }
 
+        // Load Transactions (Synchronous Source of Truth)
+        let localTxns = [];
+        try {
+            localTxns = JSON.parse(localStorage.getItem('vaultpro_txns') || '[]');
+        } catch(e) {}
+
         function saveSettings() {
             localStorage.setItem('vaultpro_settings', JSON.stringify(settingsData));
+        }
+
+        function saveTxnsToDisk() {
+            // Synchronous save. Impossible for OS to interrupt.
+            localStorage.setItem('vaultpro_txns', JSON.stringify(localTxns));
         }
 
         // Global State
@@ -482,52 +497,8 @@
         }
 
         // ==========================================
-        // FAIL-SAFE QUEUE LOGIC
+        // DUCKDB INITIALIZATION
         // ==========================================
-        let pendingTxns = JSON.parse(localStorage.getItem('vaultpro_pending_txns') || '[]');
-
-        function addPendingTxn(txn) {
-            pendingTxns.push(txn);
-            localStorage.setItem('vaultpro_pending_txns', JSON.stringify(pendingTxns));
-        }
-
-        function clearPendingTxns() {
-            pendingTxns = [];
-            localStorage.removeItem('vaultpro_pending_txns');
-        }
-
-        // ==========================================
-        // DUCKDB WASM & INDEXEDDB PERSISTENCE
-        // ==========================================
-        function getIndexedDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open('VaultProDB', 1);
-                request.onupgradeneeded = e => { e.target.result.createObjectStore('store'); };
-                request.onsuccess = e => resolve(e.target.result);
-                request.onerror = e => reject(e.target.error);
-            });
-        }
-
-        async function saveToIndexedDB(key, data) {
-            const db = await getIndexedDB();
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction('store', 'readwrite');
-                tx.objectStore('store').put(data, key);
-                tx.oncomplete = () => resolve();
-                tx.onerror = () => reject(tx.error);
-            });
-        }
-
-        async function loadFromIndexedDB(key) {
-            const db = await getIndexedDB();
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction('store', 'readonly');
-                const req = tx.objectStore('store').get(key);
-                req.onsuccess = () => resolve(req.result);
-                req.onerror = () => reject(req.error);
-            });
-        }
-
         async function initDuckDB() {
             try {
                 const duckdb = await import("https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.32.0/+esm");
@@ -545,7 +516,6 @@
                 URL.revokeObjectURL(worker_url);
 
                 const conn = await window.db.connect();
-
                 await conn.query(`
                     CREATE TABLE IF NOT EXISTS transactions (
                         id BIGINT PRIMARY KEY,
@@ -558,43 +528,19 @@
                     );
                 `);
                 
-                try {
-                    const backupData = await loadFromIndexedDB('duckdb_backup');
-                    if (backupData) {
-                        await window.db.registerFileBuffer('backup.parquet', new Uint8Array(backupData));
-                        await conn.query(`INSERT INTO transactions SELECT * FROM read_parquet('backup.parquet');`);
-                    }
-                } catch(e) {
-                    console.error("No backup found or restore failed:", e);
+                // Hydrate DuckDB from our Synchronous localStorage
+                if (localTxns.length > 0) {
+                    const txnsJsonStr = JSON.stringify(localTxns);
+                    const buffer = new TextEncoder().encode(txnsJsonStr);
+                    await window.db.registerFileBuffer('boot.json', buffer);
+                    await conn.query(`
+                        INSERT INTO transactions
+                        SELECT CAST(id AS BIGINT), type, CAST(amount AS DOUBLE), account, category, paymentMethod, txn_date
+                        FROM read_json_auto('boot.json')
+                    `);
                 }
-                
-                // Process Fail-Safe Queue
-                if (pendingTxns.length > 0) {
-                    document.getElementById('loading-text').innerText = "Recovering Data...";
-                    for (const t of pendingTxns) {
-                        try {
-                            if (t.isDelete) {
-                                await conn.query(`DELETE FROM transactions WHERE id = ${t.id}`);
-                            } else if (t.isUpdate) {
-                                await conn.query(`
-                                    UPDATE transactions 
-                                    SET type='${t.type}', amount=${t.amount}, account='${t.account}', 
-                                        category='${t.category}', paymentMethod='${t.paymentMethod}', txn_date='${t.txn_date}'
-                                    WHERE id=${t.id}
-                                `);
-                            } else {
-                                const check = await conn.query(`SELECT id FROM transactions WHERE id = ${t.id}`);
-                                if (check.toArray().length === 0) {
-                                    await conn.query(`INSERT INTO transactions VALUES (${t.id}, '${t.type}', ${t.amount}, '${t.account}', '${t.category}', '${t.paymentMethod}', '${t.txn_date}')`);
-                                }
-                            }
-                        } catch (e) { console.error("Error recovering txn:", e); }
-                    }
-                    await conn.close();
-                    await persistDB();
-                } else {
-                    await conn.close();
-                }
+
+                await conn.close();
 
                 document.getElementById('loading-overlay').style.opacity = '0';
                 setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 500);
@@ -614,20 +560,6 @@
             const result = await conn.query(sql);
             await conn.close();
             return result.toArray().map(row => row.toJSON());
-        }
-
-        async function persistDB() {
-            try {
-                const conn = await window.db.connect();
-                await conn.query(`COPY transactions TO 'backup.parquet' (FORMAT PARQUET);`);
-                const buffer = await window.db.copyFileToBuffer('backup.parquet');
-                await conn.close();
-                
-                await saveToIndexedDB('duckdb_backup', buffer);
-                clearPendingTxns(); // Success! Wipe the fail-safe queue.
-            } catch (e) {
-                console.error("Persistence failed:", e);
-            }
         }
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -666,7 +598,10 @@
                 await conn.query(`INSERT INTO transactions SELECT * FROM read_csv_auto('import.csv');`);
                 await conn.close();
                 
-                await persistDB();
+                // Sync back to local storage
+                localTxns = await queryDB(`SELECT * FROM transactions`);
+                saveTxnsToDisk();
+
                 updateDashboard();
                 if(document.getElementById('transactions').classList.contains('active')) refreshTxnViews();
                 
@@ -708,18 +643,32 @@
                 saveSettings();
 
                 if (legacyData.transactions && legacyData.transactions.length > 0) {
-                    const txnsJsonStr = JSON.stringify(legacyData.transactions);
+                    // Map legacy 'date' to 'txn_date' for DuckDB compatibility
+                    const mappedTxns = legacyData.transactions.map(t => ({
+                        id: Number(t.id),
+                        type: t.type,
+                        amount: Number(t.amount),
+                        account: t.account,
+                        category: t.category,
+                        paymentMethod: t.paymentMethod,
+                        txn_date: t.date 
+                    }));
+
+                    localTxns = mappedTxns;
+                    saveTxnsToDisk();
+
+                    const txnsJsonStr = JSON.stringify(localTxns);
                     const buffer = new TextEncoder().encode(txnsJsonStr);
                     await window.db.registerFileBuffer('legacy.json', buffer);
 
                     const conn = await window.db.connect();
+                    await conn.query(`DELETE FROM transactions`); // clear to prevent duplicates
                     await conn.query(`
                         INSERT INTO transactions
-                        SELECT CAST(id AS BIGINT), type, CAST(amount AS DOUBLE), account, category, paymentMethod, date as txn_date
+                        SELECT CAST(id AS BIGINT), type, CAST(amount AS DOUBLE), account, category, paymentMethod, txn_date
                         FROM read_json_auto('legacy.json')
                     `);
                     await conn.close();
-                    await persistDB();
                 }
 
                 populateLists();
@@ -884,8 +833,11 @@
             saveSettings();
 
             if(newName.trim() !== oldName) {
+                // Update raw storage first
+                localTxns.forEach(t => { if(t.account === oldName) t.account = newName.trim(); });
+                saveTxnsToDisk();
+                
                 await queryDB(`UPDATE transactions SET account='${newName.trim().replace(/'/g, "''")}' WHERE account='${oldName.replace(/'/g, "''")}'`);
-                await persistDB();
             }
             populateLists(); updateDashboard();
         }
@@ -895,8 +847,12 @@
             if(confirm(`Delete account '${acc.name}'? WARNING: This will also DELETE ALL transactions associated with this account!`)) {
                 settingsData.accounts.splice(idx, 1);
                 saveSettings();
+                
+                // Update raw storage first
+                localTxns = localTxns.filter(t => t.account !== acc.name);
+                saveTxnsToDisk();
+
                 await queryDB(`DELETE FROM transactions WHERE account='${acc.name.replace(/'/g, "''")}'`);
-                await persistDB();
                 populateLists(); updateDashboard();
             }
         }
@@ -907,8 +863,11 @@
             if(newCat && newCat.trim() !== "" && newCat.trim() !== oldCat) {
                 settingsData.categories[idx] = newCat.trim();
                 saveSettings();
+
+                localTxns.forEach(t => { if(t.category === oldCat) t.category = newCat.trim(); });
+                saveTxnsToDisk();
+
                 await queryDB(`UPDATE transactions SET category='${newCat.trim().replace(/'/g, "''")}' WHERE category='${oldCat.replace(/'/g, "''")}'`);
-                await persistDB();
                 populateLists(); updateDashboard();
             }
         }
@@ -926,8 +885,11 @@
             if(newPm && newPm.trim() !== "" && newPm.trim() !== oldPm) {
                 settingsData.paymentMethods[idx] = newPm.trim();
                 saveSettings();
+
+                localTxns.forEach(t => { if(t.paymentMethod === oldPm) t.paymentMethod = newPm.trim(); });
+                saveTxnsToDisk();
+
                 await queryDB(`UPDATE transactions SET paymentMethod='${newPm.trim().replace(/'/g, "''")}' WHERE paymentMethod='${oldPm.replace(/'/g, "''")}'`);
-                await persistDB();
                 populateLists(); updateDashboard();
             }
         }
@@ -989,10 +951,11 @@
         window.deleteTransaction = async function(id) {
             if (!confirm("Are you sure you want to delete this transaction?")) return;
             
-            addPendingTxn({ isDelete: true, id: id });
+            // Sync Save FIRST
+            localTxns = localTxns.filter(t => t.id !== id);
+            saveTxnsToDisk();
+
             await queryDB(`DELETE FROM transactions WHERE id = ${id}`);
-            await persistDB();
-            
             updateDashboard(); refreshTxnViews();
         };
 
@@ -1018,32 +981,47 @@
         document.getElementById('transaction-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             const amountVal = parseFloat(document.getElementById('amount').value);
-            const accountVal = document.getElementById('account').value.replace(/'/g, "''");
-            const typeVal = document.getElementById('type').value.replace(/'/g, "''");
-            const paymentMethodVal = document.getElementById('payment-method').value.replace(/'/g, "''");
-            const categoryVal = document.getElementById('category').value.replace(/'/g, "''");
+            const accountVal = document.getElementById('account').value;
+            const typeVal = document.getElementById('type').value;
+            const paymentMethodVal = document.getElementById('payment-method').value;
+            const categoryVal = document.getElementById('category').value;
             const dateVal = document.getElementById('date').value;
 
+            const safeAccount = accountVal.replace(/'/g, "''");
+            const safeType = typeVal.replace(/'/g, "''");
+            const safePM = paymentMethodVal.replace(/'/g, "''");
+            const safeCat = categoryVal.replace(/'/g, "''");
+
+            const newTxn = {
+                id: editingTransactionId ? editingTransactionId : Date.now(),
+                type: typeVal, amount: amountVal, account: accountVal, 
+                category: categoryVal, paymentMethod: paymentMethodVal, txn_date: dateVal
+            };
+
             if (editingTransactionId) {
-                addPendingTxn({ isUpdate: true, id: editingTransactionId, type: typeVal, amount: amountVal, account: accountVal, category: categoryVal, paymentMethod: paymentMethodVal, txn_date: dateVal });
+                // Sync Save FIRST
+                const index = localTxns.findIndex(t => t.id === editingTransactionId);
+                if(index > -1) localTxns[index] = newTxn;
+                saveTxnsToDisk();
+
                 await queryDB(`
                     UPDATE transactions 
-                    SET type='${typeVal}', amount=${amountVal}, account='${accountVal}', 
-                        category='${categoryVal}', paymentMethod='${paymentMethodVal}', txn_date='${dateVal}'
+                    SET type='${safeType}', amount=${amountVal}, account='${safeAccount}', 
+                        category='${safeCat}', paymentMethod='${safePM}', txn_date='${dateVal}'
                     WHERE id=${editingTransactionId}
                 `);
             } else {
-                const id = Date.now();
-                addPendingTxn({ id: id, type: typeVal, amount: amountVal, account: accountVal, category: categoryVal, paymentMethod: paymentMethodVal, txn_date: dateVal });
+                // Sync Save FIRST
+                localTxns.push(newTxn);
+                saveTxnsToDisk();
+
                 await queryDB(`
                     INSERT INTO transactions VALUES (
-                        ${id}, '${typeVal}', ${amountVal}, '${accountVal}', 
-                        '${categoryVal}', '${paymentMethodVal}', '${dateVal}'
+                        ${newTxn.id}, '${safeType}', ${amountVal}, '${safeAccount}', 
+                        '${safeCat}', '${safePM}', '${dateVal}'
                     )
                 `);
             }
-            
-            await persistDB();
             
             editingTransactionId = null;
             document.getElementById('insert-title').innerText = 'Add New Record';
