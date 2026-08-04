@@ -8,7 +8,7 @@
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#0f172a">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1038/1038927.png">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2933/2933116.png">
 
     <!-- Fonts & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -90,7 +90,7 @@
     <!-- Loading Overlay for DuckDB -->
     <div id="loading-overlay" class="fixed inset-0 bg-[#0f172a] z-[100] flex flex-col items-center justify-center">
         <div class="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-        <h2 class="text-xl font-bold">Loading Database...</h2>
+        <h2 class="text-xl font-bold">Loading VaultPro Engine...</h2>
     </div>
 
     <!-- DESKTOP Sidebar Navigation -->
@@ -119,7 +119,7 @@
 
         <div class="pt-4 border-t border-gray-700/50">
             <div class="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-left text-sm font-semibold cursor-default">
-                <span class="flex items-center gap-2"><i class="fa-solid fa-server"></i> DuckDB Active</span>
+                <span class="flex items-center gap-2"><i class="fa-solid fa-server"></i> OPFS Active</span>
                 <i class="fa-solid fa-check-circle text-xs opacity-70"></i>
             </div>
         </div>
@@ -139,7 +139,7 @@
                 <h1 class="text-lg font-bold tracking-wider">Vault<span class="text-primary">Pro</span></h1>
             </div>
             <div class="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center gap-2">
-                <i class="fa-solid fa-server"></i> DuckDB
+                <i class="fa-solid fa-server"></i> OPFS
             </div>
         </div>
 
@@ -372,7 +372,7 @@
                 
                 <!-- Data Management -->
                 <div class="border-t border-gray-700/50 pt-6">
-                    <h3 class="text-lg md:text-xl font-semibold mb-4 text-white">Data Management (DuckDB)</h3>
+                    <h3 class="text-lg md:text-xl font-semibold mb-4 text-white">Data Management (DuckDB OPFS)</h3>
                     <div class="flex flex-col md:flex-row gap-4 mb-4">
                         <button onclick="exportDataCSV()" class="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:opacity-90 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform flex justify-center items-center gap-2">
                             <i class="fa-solid fa-download"></i> Export to CSV
@@ -390,7 +390,7 @@
                         <button onclick="document.getElementById('legacy-import-input').click()" class="w-full bg-gradient-to-r from-yellow-500 to-orange-600 hover:opacity-90 text-white font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-transform flex justify-center items-center gap-2">
                             <i class="fa-solid fa-file-code"></i> Import Legacy JSON Data
                         </button>
-                        <p class="text-[10px] text-gray-400 mt-2 text-center">Use this to migrate your old VaultPro data to the new DuckDB system.</p>
+                        <p class="text-[10px] text-gray-400 mt-2 text-center">Use this to migrate your old VaultPro data to the new OPFS DuckDB system.</p>
                     </div>
                 </div>
 
@@ -463,7 +463,6 @@
         document.getElementById('global-month').value = currentGlobalMonth;
         document.getElementById('date').value = new Date().toISOString().split('T')[0];
 
-        // Format Date Helper
         function formatDateStr(dateStr) {
             const dateObj = new Date(dateStr);
             if (isNaN(dateObj)) return dateStr;
@@ -471,39 +470,7 @@
         }
 
         // ==========================================
-        // STRICT PROMISE-BASED INDEXEDDB WRAPPERS
-        // ==========================================
-        function getIndexedDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open('VaultProDB', 1);
-                request.onupgradeneeded = e => { e.target.result.createObjectStore('store'); };
-                request.onsuccess = e => resolve(e.target.result);
-                request.onerror = e => reject(e.target.error);
-            });
-        }
-
-        async function saveToIndexedDB(key, data) {
-            const db = await getIndexedDB();
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction('store', 'readwrite');
-                tx.objectStore('store').put(data, key);
-                tx.oncomplete = () => resolve();
-                tx.onerror = () => reject(tx.error);
-            });
-        }
-
-        async function loadFromIndexedDB(key) {
-            const db = await getIndexedDB();
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction('store', 'readonly');
-                const req = tx.objectStore('store').get(key);
-                req.onsuccess = () => resolve(req.result);
-                req.onerror = () => reject(req.error);
-            });
-        }
-
-        // ==========================================
-        // DUCKDB WASM INITIALIZATION
+        // DUCKDB OPFS INITIALIZATION (NATIVE PERSISTENCE)
         // ==========================================
         async function initDuckDB() {
             try {
@@ -522,6 +489,16 @@
                 URL.revokeObjectURL(worker_url);
 
                 const conn = await window.db.connect();
+                
+                // Initialize the OPFS (Origin Private File System)
+                // This connects DuckDB directly to the browser's native file system
+                // ensuring there are no asynchronous "saving" race conditions.
+                await db.open({
+                    path: 'opfs://vaultpro.db',
+                    accessMode: duckdb.DuckDBAccessMode.READ_WRITE,
+                });
+
+                // Create schema directly in the persistent database
                 await conn.query(`
                     CREATE TABLE IF NOT EXISTS transactions (
                         id BIGINT PRIMARY KEY,
@@ -534,26 +511,46 @@
                     );
                 `);
                 
-                // Strictly wait for the load from IndexedDB
+                // Check if we need to migrate from the old IndexedDB system
                 try {
-                    const backupData = await loadFromIndexedDB('duckdb_backup');
-                    if (backupData) {
-                        await window.db.registerFileBuffer('backup.parquet', new Uint8Array(backupData));
-                        await conn.query(`INSERT INTO transactions SELECT * FROM read_parquet('backup.parquet');`);
+                    const oldIdb = await new Promise((res, rej) => {
+                        const req = indexedDB.open('VaultProDB', 1);
+                        req.onsuccess = e => res(e.target.result);
+                        req.onerror = e => rej(e.target.error);
+                    });
+                    
+                    if (oldIdb.objectStoreNames.contains('store')) {
+                        const tx = oldIdb.transaction('store', 'readonly');
+                        const req = tx.objectStore('store').get('duckdb_backup');
+                        req.onsuccess = async () => {
+                            if (req.result) {
+                                // We found old data. Let's migrate it to OPFS.
+                                await window.db.registerFileBuffer('legacy_backup.parquet', new Uint8Array(req.result));
+                                // We use INSERT OR IGNORE so we don't duplicate if OPFS already has it
+                                await conn.query(`INSERT OR IGNORE INTO transactions SELECT * FROM read_parquet('legacy_backup.parquet');`);
+                                
+                                // Delete the old IndexedDB backup so we don't migrate again
+                                const delTx = oldIdb.transaction('store', 'readwrite');
+                                delTx.objectStore('store').delete('duckdb_backup');
+                            }
+                            finishInit();
+                        };
+                        req.onerror = () => finishInit();
+                    } else {
+                        finishInit();
                     }
                 } catch(e) {
-                    console.error("No backup found or restore failed:", e);
+                    finishInit();
                 }
-                
-                await conn.close();
 
-                // Unveil the UI
-                document.getElementById('loading-overlay').style.opacity = '0';
-                setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 500);
-                
-                populateLists();
-                updateDashboard();
-                if(document.getElementById('transactions').classList.contains('active')) refreshTxnViews();
+                function finishInit() {
+                    conn.close();
+                    document.getElementById('loading-overlay').style.opacity = '0';
+                    setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 500);
+                    populateLists();
+                    updateDashboard();
+                    if(document.getElementById('transactions').classList.contains('active')) refreshTxnViews();
+                }
 
             } catch (err) {
                 console.error("DuckDB Init Error:", err);
@@ -568,20 +565,6 @@
             return result.toArray().map(row => row.toJSON());
         }
 
-        async function persistDB() {
-            try {
-                const conn = await window.db.connect();
-                await conn.query(`COPY transactions TO 'backup.parquet' (FORMAT PARQUET);`);
-                const buffer = await window.db.copyFileToBuffer('backup.parquet');
-                await conn.close();
-                
-                // Strictly wait for data to write to storage before resolving
-                await saveToIndexedDB('duckdb_backup', buffer);
-            } catch (e) {
-                console.error("Persistence failed:", e);
-            }
-        }
-
         window.addEventListener('DOMContentLoaded', () => {
             initDuckDB();
         });
@@ -592,6 +575,7 @@
         window.exportDataCSV = async function() {
             try {
                 const conn = await window.db.connect();
+                // Overwrite the export file if it exists
                 await conn.query(`COPY transactions TO 'export.csv' (HEADER, DELIMITER ',');`);
                 const buffer = await window.db.copyFileToBuffer('export.csv');
                 await conn.close();
@@ -618,7 +602,6 @@
                 await conn.query(`INSERT INTO transactions SELECT * FROM read_csv_auto('import.csv');`);
                 await conn.close();
                 
-                await persistDB();
                 updateDashboard();
                 if(document.getElementById('transactions').classList.contains('active')) refreshTxnViews();
                 
@@ -671,7 +654,6 @@
                         FROM read_json_auto('legacy.json')
                     `);
                     await conn.close();
-                    await persistDB();
                 }
 
                 populateLists();
@@ -837,7 +819,6 @@
 
             if(newName.trim() !== oldName) {
                 await queryDB(`UPDATE transactions SET account='${newName.trim().replace(/'/g, "''")}' WHERE account='${oldName.replace(/'/g, "''")}'`);
-                await persistDB();
             }
             populateLists(); updateDashboard();
         }
@@ -848,7 +829,6 @@
                 settingsData.accounts.splice(idx, 1);
                 saveSettings();
                 await queryDB(`DELETE FROM transactions WHERE account='${acc.name.replace(/'/g, "''")}'`);
-                await persistDB();
                 populateLists(); updateDashboard();
             }
         }
@@ -860,7 +840,6 @@
                 settingsData.categories[idx] = newCat.trim();
                 saveSettings();
                 await queryDB(`UPDATE transactions SET category='${newCat.trim().replace(/'/g, "''")}' WHERE category='${oldCat.replace(/'/g, "''")}'`);
-                await persistDB();
                 populateLists(); updateDashboard();
             }
         }
@@ -879,7 +858,6 @@
                 settingsData.paymentMethods[idx] = newPm.trim();
                 saveSettings();
                 await queryDB(`UPDATE transactions SET paymentMethod='${newPm.trim().replace(/'/g, "''")}' WHERE paymentMethod='${oldPm.replace(/'/g, "''")}'`);
-                await persistDB();
                 populateLists(); updateDashboard();
             }
         }
@@ -941,7 +919,6 @@
         window.deleteTransaction = async function(id) {
             if (!confirm("Are you sure you want to delete this transaction?")) return;
             await queryDB(`DELETE FROM transactions WHERE id = ${id}`);
-            await persistDB();
             updateDashboard(); refreshTxnViews();
         };
 
@@ -990,7 +967,6 @@
                 `);
             }
             
-            await persistDB();
             editingTransactionId = null;
             document.getElementById('insert-title').innerText = 'Add New Record';
 
