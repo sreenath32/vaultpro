@@ -91,7 +91,7 @@
     <div id="loading-overlay" class="fixed inset-0 bg-[#0f172a] z-[100] flex flex-col items-center justify-center">
         <div class="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
         <h2 class="text-xl font-bold" id="loading-text">Loading VaultPro Engine...</h2>
-        <p class="text-sm text-gray-400 mt-2 font-mono">v2.0.4 (Data Fix)</p>
+        <p class="text-sm text-gray-400 mt-2 font-mono">v2.0.5</p>
     </div>
 
     <!-- DESKTOP Sidebar Navigation -->
@@ -102,7 +102,7 @@
             </div>
             <div class="flex flex-col">
                 <h1 class="text-xl font-bold tracking-wider leading-tight">Vault<span class="text-primary">Pro</span></h1>
-                <span class="text-[10px] text-gray-400 font-mono tracking-widest mt-0.5">v2.0.4</span>
+                <span class="text-[10px] text-gray-400 font-mono tracking-widest mt-0.5">v2.0.5</span>
             </div>
         </div>
 
@@ -142,7 +142,7 @@
                 </div>
                 <div class="flex flex-col">
                     <h1 class="text-lg font-bold tracking-wider leading-tight">Vault<span class="text-primary">Pro</span></h1>
-                    <span class="text-[9px] text-gray-400 font-mono tracking-widest mt-0.5">v2.0.4</span>
+                    <span class="text-[9px] text-gray-400 font-mono tracking-widest mt-0.5">v2.0.5</span>
                 </div>
             </div>
             <div class="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center gap-2">
@@ -254,6 +254,12 @@
                             <select id="payment-method" class="w-full input-glass rounded-lg px-4 py-3 appearance-none" required>
                             </select>
                         </div>
+                    </div>
+
+                    <!-- New Comment Field -->
+                    <div class="mt-4 md:mt-6">
+                        <label class="block text-xs md:text-sm text-gray-400 mb-2">Comment / Note (Optional)</label>
+                        <input type="text" id="comment" class="w-full input-glass rounded-lg px-4 py-3" placeholder="Enter transaction details...">
                     </div>
 
                     <button type="submit" id="save-btn" class="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white font-bold py-4 rounded-xl shadow-lg mt-4 transition-all active:scale-95">
@@ -406,7 +412,7 @@
                 <!-- VERSION INFO -->
                 <div class="mt-8 border-t border-gray-700/50 pt-6 text-center text-gray-500">
                     <p class="text-sm font-bold tracking-wider mb-1">Vault<span class="text-primary">Pro</span></p>
-                    <p class="text-xs font-mono">Version 2.0.4 (Data Fix)</p>
+                    <p class="text-xs font-mono">Version 2.0.5</p>
                 </div>
 
             </div>
@@ -526,17 +532,19 @@
                         account VARCHAR,
                         category VARCHAR,
                         paymentMethod VARCHAR,
-                        txn_date VARCHAR
+                        txn_date VARCHAR,
+                        comment VARCHAR
                     );
                 `);
                 
                 if (localTxns.length > 0) {
-                    const txnsJsonStr = JSON.stringify(localTxns);
+                    const sanitizedTxns = localTxns.map(t => ({...t, comment: t.comment || ''}));
+                    const txnsJsonStr = JSON.stringify(sanitizedTxns);
                     const buffer = new TextEncoder().encode(txnsJsonStr);
                     await window.db.registerFileBuffer('boot.json', buffer);
                     await conn.query(`
                         INSERT INTO transactions
-                        SELECT CAST(id AS BIGINT), type, CAST(amount AS DOUBLE), account, category, paymentMethod, txn_date
+                        SELECT CAST(id AS BIGINT), type, CAST(amount AS DOUBLE), account, category, paymentMethod, txn_date, comment
                         FROM read_json_auto('boot.json')
                         ON CONFLICT (id) DO NOTHING;
                     `);
@@ -662,7 +670,7 @@
                     const mappedTxns = legacyData.transactions.map(t => ({
                         id: Number(t.id), type: t.type, amount: Number(t.amount),
                         account: t.account, category: t.category, paymentMethod: t.paymentMethod,
-                        txn_date: t.date 
+                        txn_date: t.date, comment: t.comment || ''
                     }));
 
                     const txnsJsonStr = JSON.stringify(mappedTxns);
@@ -672,7 +680,7 @@
                     const conn = await window.db.connect();
                     await conn.query(`
                         INSERT INTO transactions
-                        SELECT CAST(id AS BIGINT), type, CAST(amount AS DOUBLE), account, category, paymentMethod, txn_date
+                        SELECT CAST(id AS BIGINT), type, CAST(amount AS DOUBLE), account, category, paymentMethod, txn_date, comment
                         FROM read_json_auto('legacy.json')
                         ON CONFLICT (id) DO NOTHING;
                     `);
@@ -785,6 +793,7 @@
                 editingTransactionId = null;
                 document.getElementById('transaction-form').reset();
                 document.getElementById('date').value = new Date().toISOString().split('T')[0];
+                document.getElementById('comment').value = '';
                 document.getElementById('save-btn').innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i> Save Record';
                 document.getElementById('insert-title').innerText = 'Add New Record';
             }
@@ -978,6 +987,7 @@
                 document.getElementById('account').value = t.account;
                 document.getElementById('category').value = t.category;
                 if (t.paymentMethod) document.getElementById('payment-method').value = t.paymentMethod;
+                document.getElementById('comment').value = t.comment || ''; 
                 
                 document.getElementById('insert-title').innerText = 'Edit Record';
                 const btn = document.getElementById('save-btn');
@@ -994,16 +1004,19 @@
             const paymentMethodVal = document.getElementById('payment-method').value;
             const categoryVal = document.getElementById('category').value;
             const dateVal = document.getElementById('date').value;
+            const commentVal = document.getElementById('comment').value.trim();
 
             const safeAccount = accountVal.replace(/'/g, "''");
             const safeType = typeVal.replace(/'/g, "''");
             const safePM = paymentMethodVal.replace(/'/g, "''");
             const safeCat = categoryVal.replace(/'/g, "''");
+            const safeComment = commentVal.replace(/'/g, "''");
 
             const newTxn = {
                 id: editingTransactionId ? editingTransactionId : Date.now(),
                 type: typeVal, amount: amountVal, account: accountVal, 
-                category: categoryVal, paymentMethod: paymentMethodVal, txn_date: dateVal
+                category: categoryVal, paymentMethod: paymentMethodVal, txn_date: dateVal,
+                comment: commentVal
             };
 
             if (editingTransactionId) {
@@ -1014,7 +1027,7 @@
                 await queryDB(`
                     UPDATE transactions 
                     SET type='${safeType}', amount=${amountVal}, account='${safeAccount}', 
-                        category='${safeCat}', paymentMethod='${safePM}', txn_date='${dateVal}'
+                        category='${safeCat}', paymentMethod='${safePM}', txn_date='${dateVal}', comment='${safeComment}'
                     WHERE id=${editingTransactionId}
                 `);
             } else {
@@ -1024,7 +1037,7 @@
                 await queryDB(`
                     INSERT INTO transactions VALUES (
                         ${newTxn.id}, '${safeType}', ${amountVal}, '${safeAccount}', 
-                        '${safeCat}', '${safePM}', '${dateVal}'
+                        '${safeCat}', '${safePM}', '${dateVal}', '${safeComment}'
                     )
                 `);
             }
@@ -1169,6 +1182,7 @@
                 const bg = isExp ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20';
                 const iconBg = isExp ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400';
                 const pmText = t.paymentMethod ? ` • ${t.paymentMethod}` : '';
+                const commentHtml = (t.comment && t.comment.trim() !== '') ? `<p class="text-[10px] md:text-xs text-gray-500 italic mt-1"><i class="fa-regular fa-comment-dots"></i> ${t.comment}</p>` : '';
 
                 const card = document.createElement('div');
                 card.className = `flex justify-between items-center p-3 md:p-4 rounded-xl border ${bg} mb-3`;
@@ -1180,6 +1194,7 @@
                         <div>
                             <p class="font-bold text-sm md:text-base">${t.category}</p>
                             <p class="text-[10px] md:text-xs text-gray-400">${t.account}${pmText}</p>
+                            ${commentHtml}
                         </div>
                     </div>
                     <div class="flex flex-col items-end gap-1 md:gap-2">
